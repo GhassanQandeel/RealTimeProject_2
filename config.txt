@@ -1,0 +1,52 @@
+# Configuration for Bakery Simulation
+
+# Product Categories
+bread_catagories_number=5
+sandwiches_number=8
+cake_flavors_number=10
+sweets_flavors_number=12
+sweet_patisseries_number=6
+savory_patisseries_number=7
+
+
+chefs_number=4
+bakers_number=6
+sallers_number=3
+suppliers_number=2
+
+# Ingredient Maximum Quantities (in kilograms or liters)
+wheat_amount_max=100
+yeast_amount_max=20
+butter_amount_max=30
+milk_amount_max=50
+sugar_amount_max=40
+salt_amount_max=15
+sweet_items_amount_max=60
+cheese_amount_max=25
+salami_amount_max=20
+
+# Minimum Prices (per unit)
+bread_catagories_price_min=1
+sandwiches_price_min=3
+cake_flavors_price_min=5
+sweets_flavors_price_min=2
+sweet_patisseries_price_min=4
+savory_patisseries_price_min=4
+
+# Maximum Prices (per unit)
+bread_catagories_price_max=3
+sandwiches_price_max=6
+cake_flavors_price_max=10
+sweets_flavors_price_max=5
+sweet_patisseries_price_max=7
+savory_patisseries_price_max=8
+
+# Customer Behavior Tracking
+frustrated_customers_number=2
+complained_customers_number=1
+requested_missing_items_customers_number=3
+
+# Simulation Thresholds
+daily_profit_threshold=1000
+max_time=3    # Simulation max time in minutes
+
