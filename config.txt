@@ -9,7 +9,7 @@ sweet_patisseries_number=6
 savory_patisseries_number=7
 
 
-chefs_number=4
+chefs_number=8
 bakers_number=6
 sallers_number=3
 suppliers_number=2
