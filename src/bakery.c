@@ -18,6 +18,12 @@
 #include <sys/sem.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <fcntl.h>           
+#include <sys/mman.h>        
+#include <semaphore.h>       
+#include <unistd.h>
+#include <string.h>
+
 
 #define SHM_SIZE 1024
 #define MSG_SIZE 1024
@@ -28,48 +34,123 @@
 
 
 
+/*basic Items message buffer */
+#define MAX_BUFFER_SIZE 1024
+
+
+
+/*Configuration*/
+Config config;
+char config_file_name[30];
+
+
+/*Shared memory ID and semaphore id for each basic items (milk yasset ....)*/
+
+
+int shm_wheat_id;
+char *shm_wheat_ptr;
+int shm_yeast_id;
+char *shm_yeast_ptr;
+int shm_butter_id;
+char *shm_butter_ptr;
+int shm_milk_id;
+char *shm_milk_ptr;
+int shm_sugar_id;
+char *shm_sugar_ptr;
+int shm_salt_id;
+char *shm_salt_ptr;
+int shm_sweet_items_id;
+char *shm_sweet_items_ptr;
+int shm_cheese_id;
+char *shm_cheese_ptr;
+int shm_salami_id;
+char *shm_salami_ptr;
+
+int sem_wheat_id;
+int sem_yeast_id;
+int sem_butter_id;
+int sem_milk_id;
+int sem_sugar_id;
+int sem_salt_id;
+int sem_sweet_items_id;
+int sem_cheese_id;
+int sem_salami_id;
+
+
 union semun {
     int val;
     struct semid_ds *buf;
     unsigned short *array;
-};
+}arg;
+
+/*Create shared memory and semaphore for basic items */
+
+void create_shm_sem_basic_items();
+int create_shm(char proj_id, int size, char **ptr);
+int create_sem(char proj_id);
+char *basic_items_message=NULL;
 
 
 
 
-Config config;
-char config_file_name[30];
 
-int shmid, semid;
 
+
+
+/* close shm sem  */
+
+void cleanup_shm(int shmid, char *ptr);
+void cleanup_sem(int semid);
+void cleanup_shm_sem_basic_items();
+
+
+/*message basic items */
+void create_basic_items_message();
+
+
+
+
+
+
+
+
+/* Important for structure */
 int preparation_teams[6];//in each cell have number of team members(ex: 2 paste preparation , 3 cake,... )
 int bakers_teams[3];//in each cell have number of team members
 
 
 
 
-void print_array(const pid_t array[], int size);
-void printConfig(const Config *cfg);
-void kill_process(pid_t pid);
 
 
+
+/*Create teams members*/
 void fork_chefs(pid_t chefs_pids[],pid_t paste_team_pids[],pid_t cake_team_pids[],pid_t sandwishes_team_pids[],pid_t sweets_team_pids[],pid_t sweet_patiss_team_pids[],pid_t savory_patiss_team_pids[]);
-
 void fork_bakers(pid_t bakers_pids[],pid_t sweet_cake_bake_team_pids[],pid_t sweet_savory_patiss_bake_team_pids[],pid_t bread_bake_team_pids[]);
-
 void fork_sallers(pid_t sallers_pids[]);
 void fork_suppliers(pid_t suppliers_pids[]);
 
 
-void kill_teams(pid_t chefs_pids[], pid_t baker_pids[], pid_t sallers_pids[], pid_t suppliers_pids[]);
 
 
 
+
+/*Divide teams members ( Chefs and Bakers )*/
 void divde_prepartion_team_members(int chef_number);
 void divde_bakers_team_members(int baker_number);
 
 
+/*Printing*/
+void print_array(const pid_t array[], int size);
+void printConfig(const Config *cfg);
 
+
+
+
+
+/*Terniate game*/
+void kill_teams(pid_t chefs_pids[], pid_t baker_pids[], pid_t sallers_pids[], pid_t suppliers_pids[]);
+void kill_process(pid_t pid);
 
 
 
@@ -79,7 +160,7 @@ void divde_bakers_team_members(int baker_number);
 
 
 int main(int argc, char **argv) {
-        char *shm;
+        
   
 	
 	strcpy(config_file_name, argv[1]);
@@ -91,50 +172,14 @@ int main(int argc, char **argv) {
 
 	
 	if (load_config(config_file_name, &config) == 0) {
-	    printConfig(&config);
-	    
-	    
+	    //printConfig(&config);
+	    printf("Success to load configuration.\n");
 	} else {
 	    fprintf(stderr, "Failed to load configuration.\n");
 	}
 	
 	
 
-        
-
-	/*
-    // Create shared memory segment
-    if ((shmid = shmget(IPC_PRIVATE, SHM_SIZE, IPC_CREAT | 0666)) < 0) {
-        perror("shmget");
-        exit(1);
-    }
-
-    // Attach shared memory segment
-    if ((shm = shmat(shmid, NULL, 0)) == (char *) -1) {
-        perror("shmat");
-        exit(1);
-    }
-
-    // Create semaphore set with 1 semaphore
-    if ((semid = semget(IPC_PRIVATE, 1, IPC_CREAT | 0666)) < 0) {
-        perror("semget");
-        exit(1);
-    }
-
-    // Initialize semaphore to 1 (binary semaphore)
-    union semun arg;
-    arg.val = 1;
-    if (semctl(semid, 0, SETVAL, arg) < 0) {
-        perror("semctl");
-        exit(1);
-    }
-	
-
-	*/
-	
-	
-	
-	
 	pid_t chefs_pids[config.chefs_number];
 	pid_t bakers_pids[config.bakers_number];
         pid_t sallers_pids[config.sallers_number];
@@ -152,21 +197,55 @@ int main(int argc, char **argv) {
 	pid_t bread_bake_team_pids[config.bakers_number];
         
         
+        divde_prepartion_team_members(config.chefs_number);
+        divde_bakers_team_members(config.bakers_number);
         
-	
+        
+        create_shm_sem_basic_items();
+        create_basic_items_message();
+        printf("From parent Combined IDs: %s\n", basic_items_message);
+        fork_chefs(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids,savory_patiss_team_pids);
+	//fork_bakers( bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
+	//fork_sallers(sallers_pids);
+	//fork_suppliers(suppliers_pids);
+       
+       
+       
+       
+       
+        /*Create basic items shm _sem _and message to pass it */
+       
+         
         
         /*
-        for (int i = 0; i < config.chefs_number; i++) {
-        	wait(NULL);
+    	// Create shared memory segment
+    	if ((shmid = shmget(IPC_PRIVATE, SHM_SIZE, IPC_CREAT | 0666)) < 0) {
+        perror("shmget");
+        exit(1);
     	}
-    	printf("\nParent reading shared memory:\n");
-        printf("Message in parent : %s\n",shm);
-        
-	
-	
-        
 
-        
+    	// Attach shared memory segment
+    	if ((shm = shmat(shmid, NULL, 0)) == (char *) -1) {
+        perror("shmat");
+        exit(1);
+    	}
+
+    	// Create semaphore set with 1 semaphore
+    	if ((semid = semget(IPC_PRIVATE, 1, IPC_CREAT | 0666)) < 0) {
+        perror("semget");
+        exit(1);
+    	}
+
+    	// Initialize semaphore to 1 (binary semaphore)
+    	union semun arg;
+    	arg.val = 1;
+    	if (semctl(semid, 0, SETVAL, arg) < 0) {
+        perror("semctl");
+        exit(1);
+    	}
+	
+
+	
         shmdt(shm);
     	shmctl(shmid, IPC_RMID, NULL);
     	semctl(semid, 0, IPC_RMID);
@@ -174,29 +253,22 @@ int main(int argc, char **argv) {
        
         
         
-        
-        divde_prepartion_team_members(config.chefs_number);
-        divde_bakers_team_members(config.bakers_number);
-        
-       
-        fork_chefs(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids,savory_patiss_team_pids);
-	fork_bakers( bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
-	fork_sallers(sallers_pids);
-	fork_suppliers(suppliers_pids);
-       
-        
          
-         
-        sleep(5);
-         
-       
+        
+        sleep(15);
+        cleanup_shm_sem_basic_items();
         kill_teams(chefs_pids , bakers_pids,sallers_pids,suppliers_pids);
         
         
         return 0;
-        
-    
   }
+  
+  
+  
+  
+  
+  
+  
 
 
 
@@ -224,32 +296,32 @@ void fork_chefs(pid_t chefs_pids[],pid_t paste_team_pids[],pid_t cake_team_pids[
         if (j == preparation_teams[5] && counter == 5) { j = 0; }
 
         if (counter == 0) {
-        	execlp("../bin/paste_pre", "../bin/paste_pre", config_file_name, NULL);
+        	execlp("../bin/paste_pre", "../bin/paste_pre", config_file_name,basic_items_message,NULL);
         	perror("execlp failed for chef");
         	exit(EXIT_FAILURE);
         }
         if (counter == 1) {
-        	execlp("../bin/cake_pre", "../bin/cake_pre", config_file_name, NULL);
+        	execlp("../bin/cake_pre", "../bin/cake_pre", config_file_name,basic_items_message, NULL);
         	perror("execlp failed for chef");
         	exit(EXIT_FAILURE);
         }
         if (counter == 2) {
-        	execlp("../bin/sandwiches_pre", "../bin/sandwiches_pre", config_file_name, NULL);
+        	execlp("../bin/sandwiches_pre", "../bin/sandwiches_pre", config_file_name,basic_items_message, NULL);
         	perror("execlp failed for chef");
         	exit(EXIT_FAILURE);
         }
         if (counter == 3) {
-        	execlp("../bin/sweets_pre", "../bin/sweets_pre", config_file_name, NULL);
+        	execlp("../bin/sweets_pre", "../bin/sweets_pre", config_file_name,basic_items_message,NULL);
         	perror("execlp failed for chef");
         	exit(EXIT_FAILURE);
         }
         if (counter == 4) {
-        	execlp("../bin/sweet_patiss_pre", "../bin/sweet_patiss_pre", config_file_name, NULL);
+        	execlp("../bin/sweet_patiss_pre", "../bin/sweet_patiss_pre", config_file_name,basic_items_message, NULL);
         	perror("execlp failed for chef");
         	exit(EXIT_FAILURE);
         }
         if (counter == 5) {
-        	execlp("../bin/savory_patiss_pre", "../bin/savory_patiss_pre", config_file_name, NULL);
+        	execlp("../bin/savory_patiss_pre", "../bin/savory_patiss_pre", config_file_name,basic_items_message, NULL);
         	perror("execlp failed for chef");
         	exit(EXIT_FAILURE);
         }
@@ -470,6 +542,141 @@ void divde_bakers_team_members(int baker_number){
 }
 
 
+// Helper to create shared memory
+int create_shm(char proj_id, int size, char **ptr) {
+    key_t key = ftok(".", proj_id);
+    if (key == -1) {
+        perror("ftok failed");
+        exit(1);
+    }
+    int shmid = shmget(key, size, IPC_CREAT | 0666);
+    if (shmid == -1) {
+        perror("shmget failed");
+        exit(1);
+    }
+    *ptr = (char *)shmat(shmid, NULL, 0);
+    if (*ptr == (char *)-1) {
+        perror("shmat failed");
+        exit(1);
+    }
+    return shmid;
+}
+
+// Helper to create semaphore
+int create_sem(char proj_id) {
+    key_t key = ftok(".", proj_id);
+    if (key == -1) {
+        perror("ftok failed");
+        exit(1);
+    }
+    int semid = semget(key, 3, IPC_CREAT | 0666);
+    if (semid == -1) {
+        perror("semget failed");
+        exit(1);
+    }
+    // Initialize all semaphores
+	//#define MUTEX 0       // Controls access to read_count
+	//#define READ_COUNT 1  // Tracks number of readers
+	//#define WRITE_LOCK 2  // Ensures exclusive write access					
+	unsigned short values[3] = {1, 0, 1}; // 1 for mutual exclusion ,1 for read counter , 1 for write lock 
+	arg.array = values;
+	if (semctl(semid, 0, SETALL, arg) == -1) {
+    	perror("semctl SETALL failed");
+    	exit(EXIT_FAILURE);
+    	} 
+    
+    
+    
+    return semid;
+}
+
+// Main function
+void create_shm_sem_basic_items() {
+    shm_wheat_id = create_shm('A', 64, &shm_wheat_ptr);
+    sem_wheat_id = create_sem('A');
+
+    shm_yeast_id = create_shm('B', 64, &shm_yeast_ptr);
+    sem_yeast_id = create_sem('B');
+
+    shm_butter_id = create_shm('C', 64, &shm_butter_ptr);
+    sem_butter_id = create_sem('C');
+
+    shm_milk_id = create_shm('D', 64, &shm_milk_ptr);
+    sem_milk_id = create_sem('D');
+
+    shm_sugar_id = create_shm('E', 64, &shm_sugar_ptr);
+    sem_sugar_id = create_sem('E');
+
+    shm_salt_id = create_shm('F', 64, &shm_salt_ptr);
+    sem_salt_id = create_sem('F');
+
+    shm_sweet_items_id = create_shm('G', 64, &shm_sweet_items_ptr);
+    sem_sweet_items_id = create_sem('G');
+
+    shm_cheese_id = create_shm('H', 64, &shm_cheese_ptr);
+    sem_cheese_id = create_sem('H');
+
+    shm_salami_id = create_shm('I', 64, &shm_salami_ptr);
+    sem_salami_id = create_sem('I');
+}
+
+
+
+// Helper to cleanup shared memory
+void cleanup_shm(int shmid, char *ptr) {
+    if (shmdt(ptr) == -1) {
+        perror("shmdt failed");
+    }
+    if (shmctl(shmid, IPC_RMID, NULL) == -1) {
+        perror("shmctl IPC_RMID failed");
+    }
+}
+
+// Helper to cleanup semaphore
+void cleanup_sem(int semid) {
+    if (semctl(semid, 0, IPC_RMID) == -1) {
+        perror("semctl IPC_RMID failed");
+    }
+}
+
+// Main cleanup function
+void cleanup_shm_sem_basic_items() {
+    cleanup_shm(shm_wheat_id, shm_wheat_ptr);
+    cleanup_sem(sem_wheat_id);
+
+    cleanup_shm(shm_yeast_id, shm_yeast_ptr);
+    cleanup_sem(sem_yeast_id);
+
+    cleanup_shm(shm_butter_id, shm_butter_ptr);
+    cleanup_sem(sem_butter_id);
+
+    cleanup_shm(shm_milk_id, shm_milk_ptr);
+    cleanup_sem(sem_milk_id);
+
+    cleanup_shm(shm_sugar_id, shm_sugar_ptr);
+    cleanup_sem(sem_sugar_id);
+
+    cleanup_shm(shm_salt_id, shm_salt_ptr);
+    cleanup_sem(sem_salt_id);
+
+    cleanup_shm(shm_sweet_items_id, shm_sweet_items_ptr);
+    cleanup_sem(sem_sweet_items_id);
+
+    cleanup_shm(shm_cheese_id, shm_cheese_ptr);
+    cleanup_sem(sem_cheese_id);
+
+    cleanup_shm(shm_salami_id, shm_salami_ptr);
+    cleanup_sem(sem_salami_id);
+}
+
+
+
+
+
+
+
+
+
 
 
 void printConfig(const Config *cfg) {
@@ -539,7 +746,25 @@ void print_array(const int array[], int size) {
     printf("]\n");
 }
 
-
+void create_basic_items_message() {
+    basic_items_message = (char *)malloc(MAX_BUFFER_SIZE);
+    if (basic_items_message == NULL) {
+        perror("malloc failed");
+        exit(1);
+    }
+    snprintf(basic_items_message, MAX_BUFFER_SIZE,
+        "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+        shm_wheat_id, sem_wheat_id,
+        shm_yeast_id, sem_yeast_id,
+        shm_butter_id, sem_butter_id,
+        shm_milk_id, sem_milk_id,
+        shm_sugar_id, sem_sugar_id,
+        shm_salt_id, sem_salt_id,
+        shm_sweet_items_id, sem_sweet_items_id,
+        shm_cheese_id, sem_cheese_id,
+        shm_salami_id, sem_salami_id
+    );
+}
 
 
 
