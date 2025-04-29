@@ -30,6 +30,7 @@ int load_config(const char *filename, Config *config) {
             else if (strcmp(key, "bakers_number") == 0) config->bakers_number = value;
             else if (strcmp(key, "sallers_number") == 0) config->sallers_number = value;
             else if (strcmp(key, "suppliers_number") == 0) config->suppliers_number = value;
+            else if (strcmp(key, "customer_number") == 0) config->customer_number = value;
 
             // Ingredients max
             else if (strcmp(key, "wheat_amount_max") == 0) config->wheat_amount_max = value;
@@ -59,9 +60,13 @@ int load_config(const char *filename, Config *config) {
             else if (strcmp(key, "savory_patisseries_price_max") == 0) config->savory_patisseries_price_max = value;
 
             // Customer behavior
-            else if (strcmp(key, "frustrated_customers_number") == 0) config->frustrated_customers_number = value;
-            else if (strcmp(key, "complained_customers_number") == 0) config->complained_customers_number = value;
-            else if (strcmp(key, "requested_missing_items_customers_number") == 0) config->requested_missing_items_customers_number = value;
+            else if (strcmp(key, "frustrated_customers_number_threshold") == 0) config->frustrated_customers_number_threshold = value;
+            else if (strcmp(key, "complained_customers_number_threshold") == 0) config->complained_customers_number_threshold = value;
+            else if (strcmp(key, "requested_missing_items_customers_number_threshold") == 0) config->requested_missing_items_customers_number_threshold = value;
+            else if (strcmp(key, "min_number_of_customers") == 0) config->min_number_of_customers = value;
+            else if (strcmp(key, "max_number_of_customers") == 0) config->max_number_of_customers = value;
+            else if (strcmp(key, "min_time_wait_customer") == 0) config->min_time_wait_customer = value;
+            else if (strcmp(key, "max_time_wait_customer") == 0) config->max_time_wait_customer = value;            
 
             // Simulation thresholds
             else if (strcmp(key, "daily_profit_threshold") == 0) config->daily_profit_threshold = value;

@@ -17,6 +17,7 @@ typedef struct {
     int bakers_number;
     int sallers_number;
     int suppliers_number;
+    int customer_number;
     
     
     int wheat_amount_max;
@@ -46,10 +47,15 @@ typedef struct {
     int savory_patisseries_price_max;
     
     
-    int frustrated_customers_number;
-    int complained_customers_number;
-    int requested_missing_items_customers_number;
+    int min_number_of_customers;
+    int max_number_of_customers;
+    int frustrated_customers_number_threshold;
+    int complained_customers_number_threshold;
+    int requested_missing_items_customers_number_threshold;
     int daily_profit_threshold;
+    int min_time_wait_customer;
+    int max_time_wait_customer;
+
     int max_time;
     
 } Config;

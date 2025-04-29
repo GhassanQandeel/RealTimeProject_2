@@ -13,6 +13,7 @@ chefs_number=8
 bakers_number=6
 sallers_number=3
 suppliers_number=2
+customer_number=4;
 
 # Ingredient Maximum Quantities (in kilograms or liters)
 wheat_amount_max=100
@@ -42,9 +43,14 @@ sweet_patisseries_price_max=7
 savory_patisseries_price_max=8
 
 # Customer Behavior Tracking
-frustrated_customers_number=2
-complained_customers_number=1
-requested_missing_items_customers_number=3
+min_number_of_customers=10;
+max_number_of_customers=100;
+frustrated_customers_number_threshold=50;
+complained_customers_number_threshold=10;
+requested_missing_items_customers_number_threshold=20;
+daily_profit_threshold=500;
+min_time_wait_customer=5;
+max_time_wait_customer=10;
 
 # Simulation Thresholds
 daily_profit_threshold=1000
