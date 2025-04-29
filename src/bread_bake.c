@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
 	
 	if (load_config(config_file_name, &config) == 0) {
 	    //printConfig(&config);
-	    printf("Success to load configuration.From Bread \n");
+	    printf("Success to load configuration.From Bread BAKE \n");
 	} else {
 	    fprintf(stderr, "Failed to load configuration.\n");
 	}
