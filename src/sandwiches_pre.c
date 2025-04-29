@@ -117,10 +117,10 @@ int main(int argc, char **argv) {
   	decode_shm_sem_message(argv[4], sandwiches_shm_id, sandwiches_sem_id, config.sandwiches_number);
   	
     	attach_shm_basic_items();
-    	//attach_shm_segments(bread_catagories_shm_id,bread_catagories_shm_ptr, config.bread_catagories_number);
-    	//attach_shm_segments(sandwiches_shm_id,sandwiches_shm_ptr, config.sandwiches_number);
+    	attach_shm_segments(bread_catagories_shm_id,bread_catagories_shm_ptr, config.bread_catagories_number);
+    	attach_shm_segments(sandwiches_shm_id,sandwiches_shm_ptr, config.sandwiches_number);
     	
-    	
+    	/*
         printf("BREADS SHM :\n");
     	print_array(bread_catagories_shm_id,config.bread_catagories_number);
         printf("BREADS sem :\n");
@@ -129,11 +129,10 @@ int main(int argc, char **argv) {
     	print_array(sandwiches_shm_id,config.sandwiches_number);
         printf("Sandwiches sem :\n");
         print_array(sandwiches_sem_id,config.sandwiches_number);
-        
-        
+       */
         deattach_all_shm();
-        //detach_shm_segments(bread_catagories_shm_ptr, config.bread_catagories_number);
-        //detach_shm_segments(sandwiches_shm_ptr, config.sandwiches_number);
+        detach_shm_segments(bread_catagories_shm_ptr, config.bread_catagories_number);
+        detach_shm_segments(sandwiches_shm_ptr, config.sandwiches_number);
 
         printf("From sandwischs :Current Process ID: %d\n", getpid());
         return 0;
