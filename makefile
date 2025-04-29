@@ -1,19 +1,41 @@
-gcc -o ../bin/chef chef.c
-gcc -o ../bin/baker baker.c
-gcc -o ../bin/saller saller.c
-gcc -o ../bin/supplier supplier.c
+# Compiler and flags
+CC = gcc
+CFLAGS = -Wall -Wextra -g -I../include
+LDFLAGS = 
 
+# Directories
+SRC_DIR = src
+BIN_DIR = bin
 
+# Source files
+CUSTOMER_SRC = $(SRC_DIR)/customer.c $(SRC_DIR)/config.c
+BAKERY_SRC = $(SRC_DIR)/bakery.c $(SRC_DIR)/config.c
 
-gcc -o ../bin/cake_pre cake_pre.c
-gcc -o ../bin/paste_pre paste_pre.c
-gcc -o ../bin/sandwiches_pre sandwiches_pre.c
-gcc -o ../bin/savory_patiss_pre savory_patiss_pre.c
-gcc -o ../bin/sweet_patiss_pre sweet_patiss_pre.c
-gcc -o ../bin/sweets_pre sweets_pre.c
+# Executables
+CUSTOMER_EXE = $(BIN_DIR)/customer
+BAKERY_EXE = $(BIN_DIR)/bakery
 
+# Config file
+CONFIG_FILE = config.txt
 
+# Ensure bin directory exists
+$(shell mkdir -p $(BIN_DIR))
 
-gcc -o ../bin/bread_bake bread_bake.c
-gcc -o ../bin/sweet_cake_bake sweet_cake_bake.c
-gcc -o ../bin/sweet_savory_patiss_bake sweet_savory_patiss_bake.c
+.PHONY: all clean run
+
+all: $(CUSTOMER_EXE) $(BAKERY_EXE)
+
+$(CUSTOMER_EXE): $(CUSTOMER_SRC)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+$(BAKERY_EXE): $(BAKERY_SRC)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+run: $(BAKERY_EXE)
+	./$(BAKERY_EXE) $(CONFIG_FILE)
+
+clean:
+	rm -rf $(BIN_DIR)
+
+debug: CFLAGS += -DDEBUG -O0
+debug: all
