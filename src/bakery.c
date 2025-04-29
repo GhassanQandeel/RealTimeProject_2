@@ -292,6 +292,8 @@ int main(int argc, char **argv) {
 	pid_t bakers_pids[config.bakers_number];
         pid_t sallers_pids[config.sallers_number];
         pid_t suppliers_pids[config.suppliers_number];
+        pid_t customers_pids[config.max_number_of_customers];
+        
         
         pid_t paste_team_pids[config.chefs_number];
 	pid_t cake_team_pids[config.chefs_number];
@@ -373,7 +375,7 @@ int main(int argc, char **argv) {
 	//fork_bakers( bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
 	//fork_sallers(sallers_pids);
 	//fork_suppliers(suppliers_pids);
-       
+        //fork_customers(customers_pids,sallers_pids);
        
        
        
@@ -406,7 +408,7 @@ int main(int argc, char **argv) {
 	savory_patisseries_shm_id,savory_patisseries_sem_id,savory_patisseries_shm_ptr);
 	
 		              
-        kill_teams(chefs_pids , bakers_pids,sallers_pids,suppliers_pids);
+        kill_teams(chefs_pids, bakers_pids,sallers_pids,suppliers_pids,customers_pids);
         
         
         return 0;
