@@ -6,7 +6,7 @@
 #include <sys/sem.h>
 #include <sys/wait.h>
 #include <string.h>
-
+#include "../include/config.h"
 
 
 #define MUTEX 0       // Controls access to read_count
@@ -20,7 +20,9 @@ void deattach_shm(int shmid, char *ptr);
 void deattach_all_shm();
 
 void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add);
-
+void decode_shm_sem_message(const char* message, int* shm_ids, int* sem_ids, int max_count);
+void attach_shm_segments(int* shm_ids, char** shm_ptrs, int count);
+void detach_shm_segments(char** shm_ptrs, int count);
 union semun {
     int val;
     struct semid_ds *buf;
@@ -57,28 +59,113 @@ int sem_cheese_id;
 int sem_salami_id;
 
 
-int shm_sandwiches_id;
-char *shm_sandwiches_ptr;
+char config_file_name[30];
+Config config;
 
-int sem_sandwiches_id;
+
+void print_array(const int array[], int size) {
+    printf("[");
+    for (int i = 0; i < size; i++) {
+        printf("%d", array[i]);
+        if (i < size - 1) {
+            printf(", ");
+        }
+    }
+    printf("]\n");
+}
 
 
 int main(int argc, char **argv) {
 
-    pid_t pid = getpid();
+    	strcpy(config_file_name, argv[1]);
 	
-    parse_ids(argv[2]);
-    sscanf(argv[3], "%d %d", &shm_sandwiches_id, &sem_sandwiches_id);
-    
-    attach_shm_basic_items();
-    
-    
-    
-    
-    deattach_all_shm();
-    printf("From sandwischs :Current Process ID: %d\n", pid);
-    return 0;
+    	if (argc < 2) {
+	       fprintf(stderr, "Usage: %s <config_file>\n", argv[0]);
+	        return EXIT_FAILURE;
+	    }
+
+	
+	if (load_config(config_file_name, &config) == 0) {
+	    //printConfig(&config);
+	    printf("Success to load configuration.From sandwsiches\n");
+	} else {
+	    fprintf(stderr, "Failed to load configuration.\n");
+	}
+	
+	
+	// For Bread Categories
+	int bread_catagories_shm_id[config.bread_catagories_number];
+	int bread_catagories_sem_id[config.bread_catagories_number];
+	char *bread_catagories_shm_ptr[config.bread_catagories_number];
+
+	// For Sandwiches
+	int sandwiches_shm_id[config.sandwiches_number];
+	int sandwiches_sem_id[config.sandwiches_number];
+	char *sandwiches_shm_ptr[config.sandwiches_number];
+	
+	
+	for (int i = 0; i < argc; i++) {
+        printf("argv[%d] = %s\n", i, argv[i]);
+    	}
+	
+	
+	
+	
+    	parse_ids(argv[2]);
+    	
+  	decode_shm_sem_message(argv[3], bread_catagories_shm_id, bread_catagories_sem_id, config.bread_catagories_number);
+  	decode_shm_sem_message(argv[4], sandwiches_shm_id, sandwiches_sem_id, config.sandwiches_number);
+  	
+    	attach_shm_basic_items();
+    	//attach_shm_segments(bread_catagories_shm_id,bread_catagories_shm_ptr, config.bread_catagories_number);
+    	//attach_shm_segments(sandwiches_shm_id,sandwiches_shm_ptr, config.sandwiches_number);
+    	
+    	
+        printf("BREADS SHM :\n");
+    	print_array(bread_catagories_shm_id,config.bread_catagories_number);
+        printf("BREADS sem :\n");
+        print_array(bread_catagories_sem_id,config.bread_catagories_number);
+        printf("Sandwiches SHM :\n");
+    	print_array(sandwiches_shm_id,config.sandwiches_number);
+        printf("Sandwiches sem :\n");
+        print_array(sandwiches_sem_id,config.sandwiches_number);
+        
+        
+        deattach_all_shm();
+        //detach_shm_segments(bread_catagories_shm_ptr, config.bread_catagories_number);
+        //detach_shm_segments(sandwiches_shm_ptr, config.sandwiches_number);
+
+        printf("From sandwischs :Current Process ID: %d\n", getpid());
+        return 0;
 }
+
+void decode_shm_sem_message(const char* message, int* shm_ids, int* sem_ids, int max_count) {
+    if (message == NULL || message[0] == '\0') {
+        return;
+    }
+
+    const char* ptr = message;
+    int count = 0;
+    
+    while (*ptr != '\0' && count < max_count) {
+        // Parse shm_id
+        shm_ids[count] = atoi(ptr);
+        // Move past the number
+        while (*ptr != '\0' && *ptr != ' ') ptr++;
+        if (*ptr == ' ') ptr++;  // skip space
+        
+        // Parse sem_id
+        sem_ids[count] = atoi(ptr);
+        // Move past the number
+        while (*ptr != '\0' && *ptr != ' ') ptr++;
+        if (*ptr == ' ') ptr++;  // skip space
+        
+        count++;
+    }
+    
+   
+}
+
 
 void parse_ids(const char *buffer) {
     sscanf(buffer,
@@ -158,13 +245,38 @@ void attach_shm_basic_items() {
         perror("shmat salami failed");
         exit(1);
     }
-    shm_sandwiches_ptr = (char *)shmat(shm_sandwiches_id, NULL, 0);
-    if (shm_sandwiches_ptr == (char *)-1) {
-        perror("shmat salami failed");
-        exit(1);
-    }
+    
     
 }
+
+
+void attach_shm_segments(int* shm_ids, char** shm_ptrs, int count) {
+    for (int i = 0; i < count; i++) {
+        shm_ptrs[i] = (char *)shmat(shm_ids[i], NULL, 0);
+        if (shm_ptrs[i] == (char *)-1) {
+            perror("shmat failed");
+            
+            // Cleanup any already attached segments
+            for (int j = 0; j < i; j++) {
+                shmdt(shm_ptrs[j]);
+            }
+            
+           
+        }
+    }
+}
+
+void detach_shm_segments(char** shm_ptrs, int count) {
+    for (int i = 0; i < count; i++) {
+        if (shm_ptrs[i] != NULL && shm_ptrs[i] != (char *)-1) {
+            if (shmdt(shm_ptrs[i]) == -1) {
+                perror("shmdt failed");
+                // Continue trying to detach others even if one fails
+            }
+        }
+    }
+}
+
 
 void deattach_shm(int shmid, char *ptr) {
     if (shmdt(ptr) == -1) {
@@ -182,7 +294,7 @@ void deattach_all_shm() {
     deattach_shm(shm_sweet_items_id, shm_sweet_items_ptr);
     deattach_shm(shm_cheese_id, shm_cheese_ptr);
     deattach_shm(shm_salami_id, shm_salami_ptr);
-    deattach_shm(shm_sandwiches_id, shm_sandwiches_ptr);
+    
     
 }
 void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {

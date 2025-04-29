@@ -123,10 +123,29 @@ char *basic_items_message=NULL;
 void write_shared_int(int sem_id, char *shm_ptr, int new_value);
 
 void initialize_shm_and_sem(int *shm_ids,int *sem_ids,char **shm_ptrs, int count, char base_key);
+void initialize_all_shm_and_sem_for_sale(
+	int *bread_catagories_shm_id,int *bread_catagories_sem_id,char **bread_catagories_shm_ptr,
+	int *sandwiches_shm_id,int *sandwiches_sem_id,char **sandwiches_shm_ptr,
+	int *cake_flavors_shm_id,int *cake_flavors_sem_id,char **cake_flavors_shm_ptr,
+	int *sweets_flavors_shm_id,int *sweets_flavors_sem_id,char **sweets_flavors_shm_ptr,
+	int *sweet_patisseries_shm_id,int *sweet_patisseries_sem_id,char **sweet_patisseries_shm_ptr,
+	int *savory_patisseries_shm_id,int *savory_patisseries_sem_id,char **savory_patisseries_shm_ptr);
+	
+	
+void create_all_shm_and_sem_for_sale_message(
+	int *bread_catagories_shm_id,int *bread_catagories_sem_id,
+	int *sandwiches_shm_id,int *sandwiches_sem_id,
+	int *cake_flavors_shm_id,int *cake_flavors_sem_id,
+	int *sweets_flavors_shm_id,int *sweets_flavors_sem_id,
+	int *sweet_patisseries_shm_id,int *sweet_patisseries_sem_id,
+	int *savory_patisseries_shm_id,int *savory_patisseries_sem_id);	
 
-
-
-
+void cleanup_shm_sem_for_sale(int *bread_catagories_shm_id,int *bread_catagories_sem_id,char **bread_catagories_shm_ptr,
+	int *sandwiches_shm_id,int *sandwiches_sem_id,char **sandwiches_shm_ptr,
+	int *cake_flavors_shm_id,int *cake_flavors_sem_id,char **cake_flavors_shm_ptr,
+	int *sweets_flavors_shm_id,int *sweets_flavors_sem_id,char **sweets_flavors_shm_ptr,
+	int *sweet_patisseries_shm_id,int *sweet_patisseries_sem_id,char **sweet_patisseries_shm_ptr,
+	int *savory_patisseries_shm_id,int *savory_patisseries_sem_id,char **savory_patisseries_shm_ptr);
 
 /* close shm sem  */
 
@@ -266,109 +285,39 @@ int main(int argc, char **argv) {
 	
 	
 	
-        
-        
+   
         divde_prepartion_team_members(config.chefs_number);
         divde_bakers_team_members(config.bakers_number);
         
-        
+        initialize_all_shm_and_sem_for_sale(
+	bread_catagories_shm_id,bread_catagories_sem_id,bread_catagories_shm_ptr,
+	sandwiches_shm_id,sandwiches_sem_id,sandwiches_shm_ptr,
+	cake_flavors_shm_id,cake_flavors_sem_id,cake_flavors_shm_ptr,
+	sweets_flavors_shm_id,sweets_flavors_sem_id,sweets_flavors_shm_ptr,
+	sweet_patisseries_shm_id,sweet_patisseries_sem_id,sweet_patisseries_shm_ptr,
+	savory_patisseries_shm_id,savory_patisseries_sem_id,savory_patisseries_shm_ptr);
         create_shm_sem_basic_items();
-        initialize_shm_and_sem(
-        bread_catagories_shm_id,
-        bread_catagories_sem_id,
-        bread_catagories_shm_ptr,
-        config.bread_catagories_number,
-        'A' // starting base key for bread categories
-    	);
-
-    	initialize_shm_and_sem(
-        sandwiches_shm_id,
-        sandwiches_sem_id,
-        sandwiches_shm_ptr,
-        config.sandwiches_number,
-        'K' // starting base key for sandwiches
-    	);
-
-    	initialize_shm_and_sem(
-        cake_flavors_shm_id,
-        cake_flavors_sem_id,
-        cake_flavors_shm_ptr,
-        config.cake_flavors_number,
-        'U' // starting base key for cake flavors
-    	);
-
-    	initialize_shm_and_sem(
-        sweets_flavors_shm_id,
-        sweets_flavors_sem_id,
-        sweets_flavors_shm_ptr,
-        config.sweets_flavors_number,
-        'e' // starting base key for sweets flavors (lowercase to avoid overlap)
-    	);
-
-    	initialize_shm_and_sem(
-        sweet_patisseries_shm_id,
-        sweet_patisseries_sem_id,
-        sweet_patisseries_shm_ptr,
-        config.sweet_patisseries_number,
-        'o' // starting base key for sweet patisseries
-    	);
-
-    	initialize_shm_and_sem(
-        savory_patisseries_shm_id,
-        savory_patisseries_sem_id,
-        savory_patisseries_shm_ptr,
-        config.savory_patisseries_number,
-        'y' // starting base key for savory patisseries
-    	);
+        
+        
+        
     	
-    	// For Bread Categories
-	bread_catagories_shm_sem_message = create_shm_sem_message(
-	    bread_catagories_shm_id, 
-	    bread_catagories_sem_id, 
-	    config.bread_catagories_number
-	);
-
-	// For Sandwiches
-	sandwiches_shm_sem_message = create_shm_sem_message(
-	    sandwiches_shm_id, 
-	    sandwiches_sem_id, 
-	    config.sandwiches_number
-	);
-
-	// For Cake Flavors
-	cake_flavors_shm_sem_message = create_shm_sem_message(
-	    cake_flavors_shm_id, 
-	    cake_flavors_sem_id, 
-	    config.cake_flavors_number
-	);
-
-	// For Sweets Flavors
-	sweets_flavors_shm_sem_message = create_shm_sem_message(
-	    sweets_flavors_shm_id, 
-	    sweets_flavors_sem_id, 
-	    config.sweets_flavors_number
-	);
-
-	// For Sweet Patisseries
-	sweet_patisseries_shm_sem_message = create_shm_sem_message(
-	    sweet_patisseries_shm_id, 
-	    sweet_patisseries_sem_id, 
-	    config.sweet_patisseries_number
-	);
-
-	// For Savory Patisseries
-	savory_patisseries_shm_sem_message = create_shm_sem_message(
-	    savory_patisseries_shm_id, 
-	    savory_patisseries_sem_id, 
-	    config.savory_patisseries_number
-	);
+    	
+		
+	create_all_shm_and_sem_for_sale_message(
+	bread_catagories_shm_id,bread_catagories_sem_id,
+	sandwiches_shm_id,sandwiches_sem_id,
+	cake_flavors_shm_id,cake_flavors_sem_id,
+	sweets_flavors_shm_id,sweets_flavors_sem_id,
+	sweet_patisseries_shm_id,sweet_patisseries_sem_id,
+	savory_patisseries_shm_id,savory_patisseries_sem_id);	
+	
 
         create_basic_items_message();
         create_production_items_message();
         
         
         //write_shared_int(sem_wheat_id, shm_wheat_ptr, 15);
-        //fork_chefs(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids,savory_patiss_team_pids);
+        fork_chefs(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids,savory_patiss_team_pids);
 	//fork_bakers( bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
 	//fork_sallers(sallers_pids);
 	//fork_suppliers(suppliers_pids);
@@ -380,39 +329,32 @@ int main(int argc, char **argv) {
         /*Create basic items shm _sem _and message to pass it */
        
          
-        
-    
-        
+       
+        printf("bread :%s\n\n",bread_catagories_shm_sem_message);
+       
+        printf("sandwiches :%s\n\n",sandwiches_shm_sem_message);
+        /*
+        printf("cake :%s\n\n",cake_flavors_shm_sem_message);
+        printf("sweets :%s\n\n",sweets_flavors_shm_sem_message);
+        printf("sweet patiss :%s\n\n",sweet_patisseries_shm_sem_message);
+        printf("savory patiss :%s\n\n",savory_patisseries_shm_sem_message);
+        */
+
          
    	
         sleep(10);
-        cleanup_shm_sem_basic_items();
         
-	// Clean up Bread Categories
-	cleanup_shm_sem_bakery(bread_catagories_shm_id, bread_catagories_sem_id, 
-		              bread_catagories_shm_ptr, config.bread_catagories_number);
-
-	// Clean up Sandwiches
-	cleanup_shm_sem_bakery(sandwiches_shm_id, sandwiches_sem_id, 
-		              sandwiches_shm_ptr, config.sandwiches_number);
-
-	// Clean up Cake Flavors
-	cleanup_shm_sem_bakery(cake_flavors_shm_id, cake_flavors_sem_id, 
-		              cake_flavors_shm_ptr, config.cake_flavors_number);
-
-	// Clean up Sweets Flavors
-	cleanup_shm_sem_bakery(sweets_flavors_shm_id, sweets_flavors_sem_id, 
-		              sweets_flavors_shm_ptr, config.sweets_flavors_number);
-
-	// Clean up Sweet Patisseries
-	cleanup_shm_sem_bakery(sweet_patisseries_shm_id, sweet_patisseries_sem_id, 
-		              sweet_patisseries_shm_ptr, config.sweet_patisseries_number);
-
-	// Clean up Savory Patisseries
-	cleanup_shm_sem_bakery(savory_patisseries_shm_id, savory_patisseries_sem_id, 
-		              savory_patisseries_shm_ptr, config.savory_patisseries_number);
+        
+        cleanup_shm_sem_basic_items();
+        cleanup_shm_sem_for_sale(bread_catagories_shm_id,bread_catagories_sem_id,bread_catagories_shm_ptr,
+	sandwiches_shm_id,sandwiches_sem_id,sandwiches_shm_ptr,
+	cake_flavors_shm_id,cake_flavors_sem_id,cake_flavors_shm_ptr,
+	sweets_flavors_shm_id,sweets_flavors_sem_id,sweets_flavors_shm_ptr,
+	sweet_patisseries_shm_id,sweet_patisseries_sem_id,sweet_patisseries_shm_ptr,
+	savory_patisseries_shm_id,savory_patisseries_sem_id,savory_patisseries_shm_ptr);
+	
 		              
-        //kill_teams(chefs_pids , bakers_pids,sallers_pids,suppliers_pids);
+        kill_teams(chefs_pids , bakers_pids,sallers_pids,suppliers_pids);
         
         
         return 0;
@@ -460,7 +402,12 @@ void fork_chefs(pid_t chefs_pids[],pid_t paste_team_pids[],pid_t cake_team_pids[
         	exit(EXIT_FAILURE);
         }
         if (counter == 2) {
-        	execlp("../bin/sandwiches_pre", "../bin/sandwiches_pre", config_file_name,basic_items_message,chef_production_message[2], NULL);
+        	execlp("../bin/sandwiches_pre",
+        	 "../bin/sandwiches_pre",
+        	  config_file_name,
+        	  basic_items_message,
+        	  bread_catagories_shm_sem_message,
+        	  sandwiches_shm_sem_message, NULL);
         	perror("execlp failed for chef");
         	exit(EXIT_FAILURE);
         }
@@ -532,21 +479,41 @@ void fork_bakers(pid_t bakers_pids[], pid_t sweet_cake_bake_team_pids[], pid_t s
             if (j == bakers_teams[2] && counter == 2) { j = 0; }
 
             if (counter == 0) {
-                execlp("../bin/sweet_cake_bake", "../bin/sweet_cake_bake", config_file_name,chef_production_message[1],chef_production_message[3], NULL);
+                execlp("../bin/sweet_cake_bake",
+                 "../bin/sweet_cake_bake",
+                  config_file_name,
+                  chef_production_message[1],
+                  chef_production_message[3],
+                  cake_flavors_shm_sem_message,
+                  sweets_flavors_shm_sem_message, NULL);
                 perror("execlp failed for baker (sweet_cake_bake)");
                 exit(EXIT_FAILURE);
             }
             if (counter == 1) {
-                execlp("../bin/sweet_savory_patiss_bake", "../bin/sweet_savory_patiss_bake", config_file_name, chef_production_message[4],chef_production_message[5],NULL);
+                execlp("../bin/sweet_savory_patiss_bake",
+                 "../bin/sweet_savory_patiss_bake",
+                  config_file_name,
+                  chef_production_message[4],
+                  chef_production_message[5],
+                  sweet_patisseries_shm_sem_message,
+                  savory_patisseries_shm_sem_message
+                  ,NULL);
+                  
                 perror("execlp failed for baker (sweet_savory_patiss_bake)");
                 exit(EXIT_FAILURE);
             }
             if (counter == 2) {
-                execlp("../bin/bread_bake", "../bin/bread_bake", config_file_name,chef_production_message[0], NULL);
+                execlp("../bin/bread_bake",
+                 "../bin/bread_bake",
+                 config_file_name,
+                 chef_production_message[0],
+                 bread_catagories_shm_sem_message
+                 ,NULL);
+                
                 perror("execlp failed for baker (bread_bake)");
                 exit(EXIT_FAILURE);
             }
-
+   
         } else if (bakers_pids[i] > 0) {
             // ----- PARENT PROCESS -----
             if (counter == 0) {
@@ -616,10 +583,12 @@ void kill_process(pid_t pid) {
 // Function to clean up by killing all processes
 void kill_teams(pid_t chefs_pids[] , pid_t baker_pids[], pid_t sallers_pids[], pid_t suppliers_pids[]) {
     // Kill chefs processes
+    
     for (int i = 0; i < config.chefs_number; i++) {
         kill_process(chefs_pids[i]);
     }
     
+    /*
     // Kill bakers processes
     for (int i = 0; i < config.bakers_number; i++) {
         kill_process(baker_pids[i]);
@@ -633,8 +602,12 @@ void kill_teams(pid_t chefs_pids[] , pid_t baker_pids[], pid_t sallers_pids[], p
     // Kill suppliers processes
     for (int i = 0; i < config.suppliers_number; i++) {
         kill_process(suppliers_pids[i]);
-    }
+    }*/
 }
+
+
+
+
 void divde_prepartion_team_members(int chef_number){
 
 
@@ -744,7 +717,8 @@ int create_sem(char proj_id) {
     return semid;
 }
 
-// Main function
+
+
 void create_shm_sem_basic_items() {
     shm_wheat_id = create_shm('A', 64, &shm_wheat_ptr);
     sem_wheat_id = create_sem('A');
@@ -997,8 +971,149 @@ char* create_shm_sem_message(int* shm_ids, int* sem_ids, int count) {
 
     return message;
 }
+void initialize_all_shm_and_sem_for_sale(
+	int *bread_catagories_shm_id,int *bread_catagories_sem_id,char **bread_catagories_shm_ptr,
+	int *sandwiches_shm_id,int *sandwiches_sem_id,char **sandwiches_shm_ptr,
+	int *cake_flavors_shm_id,int *cake_flavors_sem_id,char **cake_flavors_shm_ptr,
+	int *sweets_flavors_shm_id,int *sweets_flavors_sem_id,char **sweets_flavors_shm_ptr,
+	int *sweet_patisseries_shm_id,int *sweet_patisseries_sem_id,char **sweet_patisseries_shm_ptr,
+	int *savory_patisseries_shm_id,int *savory_patisseries_sem_id,char **savory_patisseries_shm_ptr){
+	
+	
+	initialize_shm_and_sem(
+        bread_catagories_shm_id,
+        bread_catagories_sem_id,
+        bread_catagories_shm_ptr,
+        config.bread_catagories_number,
+        'A' // starting base key for bread categories
+    	);
+
+    	initialize_shm_and_sem(
+        sandwiches_shm_id,
+        sandwiches_sem_id,
+        sandwiches_shm_ptr,
+        config.sandwiches_number,
+        'K' // starting base key for sandwiches
+    	);
+
+    	initialize_shm_and_sem(
+        cake_flavors_shm_id,
+        cake_flavors_sem_id,
+        cake_flavors_shm_ptr,
+        config.cake_flavors_number,
+        'U' // starting base key for cake flavors
+    	);
+
+    	initialize_shm_and_sem(
+        sweets_flavors_shm_id,
+        sweets_flavors_sem_id,
+        sweets_flavors_shm_ptr,
+        config.sweets_flavors_number,
+        'e' // starting base key for sweets flavors (lowercase to avoid overlap)
+    	);
+
+    	initialize_shm_and_sem(
+        sweet_patisseries_shm_id,
+        sweet_patisseries_sem_id,
+        sweet_patisseries_shm_ptr,
+        config.sweet_patisseries_number,
+        'o' // starting base key for sweet patisseries
+    	);
+
+    	initialize_shm_and_sem(
+        savory_patisseries_shm_id,
+        savory_patisseries_sem_id,
+        savory_patisseries_shm_ptr,
+        config.savory_patisseries_number,
+        'y' // starting base key for savory patisseries
+    	);
+	}
+	
+void create_all_shm_and_sem_for_sale_message(
+	int *bread_catagories_shm_id,int *bread_catagories_sem_id,
+	int *sandwiches_shm_id,int *sandwiches_sem_id,
+	int *cake_flavors_shm_id,int *cake_flavors_sem_id,
+	int *sweets_flavors_shm_id,int *sweets_flavors_sem_id,
+	int *sweet_patisseries_shm_id,int *sweet_patisseries_sem_id,
+	int *savory_patisseries_shm_id,int *savory_patisseries_sem_id){
+	
+	
+    	// For Bread Categories
+	bread_catagories_shm_sem_message = create_shm_sem_message(
+	    bread_catagories_shm_id, 
+	    bread_catagories_sem_id, 
+	    config.bread_catagories_number
+	);
+
+	// For Sandwiches
+	sandwiches_shm_sem_message = create_shm_sem_message(
+	    sandwiches_shm_id, 
+	    sandwiches_sem_id, 
+	    config.sandwiches_number
+	);
+
+	// For Cake Flavors
+	cake_flavors_shm_sem_message = create_shm_sem_message(
+	    cake_flavors_shm_id, 
+	    cake_flavors_sem_id, 
+	    config.cake_flavors_number
+	);
+
+	// For Sweets Flavors
+	sweets_flavors_shm_sem_message = create_shm_sem_message(
+	    sweets_flavors_shm_id, 
+	    sweets_flavors_sem_id, 
+	    config.sweets_flavors_number
+	);
+
+	// For Sweet Patisseries
+	sweet_patisseries_shm_sem_message = create_shm_sem_message(
+	    sweet_patisseries_shm_id, 
+	    sweet_patisseries_sem_id, 
+	    config.sweet_patisseries_number
+	);
+
+	// For Savory Patisseries
+	savory_patisseries_shm_sem_message = create_shm_sem_message(
+	    savory_patisseries_shm_id, 
+	    savory_patisseries_sem_id, 
+	    config.savory_patisseries_number
+	);
+	
+	}	
 
 
+void cleanup_shm_sem_for_sale(
+        int *bread_catagories_shm_id,int *bread_catagories_sem_id,char **bread_catagories_shm_ptr,
+	int *sandwiches_shm_id,int *sandwiches_sem_id,char **sandwiches_shm_ptr,
+	int *cake_flavors_shm_id,int *cake_flavors_sem_id,char **cake_flavors_shm_ptr,
+	int *sweets_flavors_shm_id,int *sweets_flavors_sem_id,char **sweets_flavors_shm_ptr,
+	int *sweet_patisseries_shm_id,int *sweet_patisseries_sem_id,char **sweet_patisseries_shm_ptr,
+	int *savory_patisseries_shm_id,int *savory_patisseries_sem_id,char **savory_patisseries_shm_ptr){
+	// Clean up Bread Categories
+	cleanup_shm_sem_bakery(bread_catagories_shm_id, bread_catagories_sem_id, 
+		              bread_catagories_shm_ptr, config.bread_catagories_number);
+
+	// Clean up Sandwiches
+	cleanup_shm_sem_bakery(sandwiches_shm_id, sandwiches_sem_id, 
+		              sandwiches_shm_ptr, config.sandwiches_number);
+
+	// Clean up Cake Flavors
+	cleanup_shm_sem_bakery(cake_flavors_shm_id, cake_flavors_sem_id, 
+		              cake_flavors_shm_ptr, config.cake_flavors_number);
+
+	// Clean up Sweets Flavors
+	cleanup_shm_sem_bakery(sweets_flavors_shm_id, sweets_flavors_sem_id, 
+		              sweets_flavors_shm_ptr, config.sweets_flavors_number);
+
+	// Clean up Sweet Patisseries
+	cleanup_shm_sem_bakery(sweet_patisseries_shm_id, sweet_patisseries_sem_id, 
+		              sweet_patisseries_shm_ptr, config.sweet_patisseries_number);
+
+	// Clean up Savory Patisseries
+	cleanup_shm_sem_bakery(savory_patisseries_shm_id, savory_patisseries_sem_id, 
+		              savory_patisseries_shm_ptr, config.savory_patisseries_number);
+	}
 
 
 void create_production_items_message() {

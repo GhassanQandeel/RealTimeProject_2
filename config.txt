@@ -1,15 +1,15 @@
 # Configuration for Bakery Simulation
 
 # Product Categories
-bread_catagories_number=5
-sandwiches_number=8
-cake_flavors_number=10
-sweets_flavors_number=12
-sweet_patisseries_number=6
-savory_patisseries_number=7
+bread_catagories_number=2
+sandwiches_number=1
+cake_flavors_number=1
+sweets_flavors_number=1
+sweet_patisseries_number=1
+savory_patisseries_number=1
 
 
-chefs_number=8
+chefs_number=6
 bakers_number=6
 sallers_number=3
 suppliers_number=2
