@@ -20,6 +20,7 @@ Body: Always blue (the rectangle you're seeing)*/
 
 #define MAX_CUSTOMERS 20
 #define MAX_PRODUCTS 50
+#define MAX_STAFF 10
 
 // Product types
 #define BREAD 0
@@ -28,6 +29,11 @@ Body: Always blue (the rectangle you're seeing)*/
 #define SWEET 3
 #define PATISSERIE 4
 #define PRODUCT_TYPES 5
+
+// Staff types
+#define CHEF 0
+#define BAKER 1
+#define SELLER 2
 
 typedef struct {
     float x, y;
@@ -46,6 +52,13 @@ typedef struct {
 } Product;
 
 typedef struct {
+    float x, y;
+    int type;
+    int busy;
+    float progress;
+} Staff;
+
+typedef struct {
     // Configuration
     int bread_categories;
     int sandwich_types;
@@ -53,7 +66,7 @@ typedef struct {
     int sweets_flavors;
     int patisserie_types;
     
-    // Staff
+    // Staff counts
     int chefs;
     int bakers;
     int sellers;
@@ -73,6 +86,7 @@ typedef struct {
     int simulation_running;
     Customer customers[MAX_CUSTOMERS];
     Product products[MAX_PRODUCTS];
+    Staff staff[MAX_STAFF];
     float time_since_last_customer;
     float time_since_last_product;
 } BakeryState;
@@ -82,16 +96,22 @@ BakeryState bakery;
 // Table positions
 typedef struct {
     float x, y;
-    float width;
+    float width, height;
     const char* label;
-} ProductTable;
+} Table;
 
-ProductTable tables[PRODUCT_TYPES] = {
-    {150, 250, 150, "Bread"},      // Bread table
-    {325, 250, 150, "Cakes"},      // Cake table
-    {500, 250, 150, "Sandwiches"}, // Sandwich table
-    {675, 250, 150, "Sweets"},     // Sweet table
-    {850, 250, 150, "Patisserie"}  // Patisserie table
+Table prep_tables[3] = {
+    {150, 650, 200, 80, "Dough Prep"},   // Dough preparation
+    {450, 650, 200, 80, "Baking Station"}, // Baking
+    {750, 650, 200, 80, "Decoration"}     // Cake decoration
+};
+
+Table display_tables[PRODUCT_TYPES] = {
+    {150, 250, 150, 60, "Bread"},      // Bread table
+    {325, 250, 150, 60, "Cakes"},      // Cake table
+    {500, 250, 150, 60, "Sandwiches"}, // Sandwich table
+    {675, 250, 150, 60, "Sweets"},     // Sweet table
+    {850, 250, 150, 60, "Patisserie"}  // Patisserie table
 };
 
 // Function prototypes
@@ -99,7 +119,9 @@ void init();
 void display();
 void reshape(int w, int h);
 void update(int value);
-void drawBakery();
+void drawDividers();
+void drawPreparationArea();
+void drawSalesArea();
 void drawResources();
 void drawStaff();
 void drawCustomers();
@@ -108,12 +130,14 @@ void drawProducts();
 void drawStatus();
 void drawText(float x, float y, const char* string);
 void drawCustomer(float x, float y, int mood);
-void drawBaker(float x, float y, int type);
+void drawStaffMember(float x, float y, int type, int busy);
 void drawProduct(float x, float y, int type);
 void addCustomer();
 void addProduct();
 void updateCustomer(Customer *c);
 void updateProducts();
+void updateStaff();
+void drawTable(float x, float y, float width, float height, const char* label);
 
 int main(int argc, char** argv) {
     srand(time(NULL));
@@ -121,10 +145,10 @@ int main(int argc, char** argv) {
     // Initialize bakery state
     memset(&bakery, 0, sizeof(BakeryState));
     bakery.simulation_running = 1;
-    bakery.chefs = 5;
-    bakery.bakers = 3;
+    bakery.chefs = 3;
+    bakery.bakers = 2;
     bakery.sellers = 2;
-    bakery.supply_employees = 2;
+    bakery.supply_employees = 1;
     bakery.bread_categories = 3;
     bakery.sandwich_types = 2;
     bakery.cake_flavors = 4;
@@ -133,6 +157,23 @@ int main(int argc, char** argv) {
     
     for (int i = 0; i < 8; i++) {
         bakery.resources[i] = 1.0f;
+    }
+
+    // Initialize staff positions
+    for (int i = 0; i < bakery.chefs; i++) {
+        bakery.staff[i].type = CHEF;
+        bakery.staff[i].x = prep_tables[0].x + prep_tables[0].width/2 + (i-1)*40;
+        bakery.staff[i].y = prep_tables[0].y - 30;
+    }
+    for (int i = 0; i < bakery.bakers; i++) {
+        bakery.staff[bakery.chefs+i].type = BAKER;
+        bakery.staff[bakery.chefs+i].x = prep_tables[1].x + prep_tables[1].width/2 + (i-0.5)*40;
+        bakery.staff[bakery.chefs+i].y = prep_tables[1].y - 30;
+    }
+    for (int i = 0; i < bakery.sellers; i++) {
+        bakery.staff[bakery.chefs+bakery.bakers+i].type = SELLER;
+        bakery.staff[bakery.chefs+bakery.bakers+i].x = 600 + (i-0.5)*80;
+        bakery.staff[bakery.chefs+bakery.bakers+i].y = 350;
     }
 
     // Initialize GLUT
@@ -153,7 +194,7 @@ int main(int argc, char** argv) {
 }
 
 void init() {
-    glClearColor(0.95f, 0.95f, 0.9f, 1.0f); // Light gray background
+    glClearColor(0.96f, 0.96f, 0.94f, 1.0f); // Very light gray background
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluOrtho2D(0, 1200, 0, 800);
@@ -162,11 +203,9 @@ void init() {
 void display() {
     glClear(GL_COLOR_BUFFER_BIT);
     
-    drawBakery();
-    drawProductTables();
-    drawProducts();
-    drawStaff();
-    drawCustomers();
+    drawDividers();
+    drawPreparationArea();
+    drawSalesArea();
     drawResources();
     drawStatus();
     
@@ -180,6 +219,179 @@ void reshape(int w, int h) {
     gluOrtho2D(0, w, 0, h);
     glMatrixMode(GL_MODELVIEW);
 }
+
+void drawDividers() {
+    // Main divider between preparation and sales areas
+    glColor3f(0.5f, 0.5f, 0.5f);
+    glLineWidth(2.0);
+    glBegin(GL_LINES);
+    glVertex2f(50, 400);
+    glVertex2f(1150, 400);
+    glEnd();
+    
+    // Label for areas
+    glColor3f(0.3f, 0.3f, 0.3f);
+    drawText(100, 380, "PREPARATION AREA");
+    drawText(100, 180, "SALES AREA");
+}
+
+void drawPreparationArea() {
+    // Draw preparation tables
+    for (int i = 0; i < 3; i++) {
+        drawTable(prep_tables[i].x, prep_tables[i].y, 
+                 prep_tables[i].width, prep_tables[i].height, 
+                 prep_tables[i].label);
+    }
+    
+    // Draw staff in preparation area
+    for (int i = 0; i < bakery.chefs + bakery.bakers; i++) {
+        drawStaffMember(bakery.staff[i].x, bakery.staff[i].y, 
+                       bakery.staff[i].type, bakery.staff[i].busy);
+    }
+}
+
+void drawSalesArea() {
+    // Draw product display tables
+    drawProductTables();
+    drawProducts();
+    
+    // Draw customers
+    drawCustomers();
+    
+    // Draw sellers
+    for (int i = bakery.chefs + bakery.bakers; 
+         i < bakery.chefs + bakery.bakers + bakery.sellers; i++) {
+        drawStaffMember(bakery.staff[i].x, bakery.staff[i].y, 
+                       bakery.staff[i].type, bakery.staff[i].busy);
+    }
+}
+
+void drawTable(float x, float y, float width, float height, const char* label) {
+    // Table top
+    glColor3f(0.82f, 0.70f, 0.55f); // Light wood color
+    glBegin(GL_QUADS);
+    glVertex2f(x, y);
+    glVertex2f(x + width, y);
+    glVertex2f(x + width, y + height);
+    glVertex2f(x, y + height);
+    glEnd();
+    
+    // Table edge
+    glColor3f(0.62f, 0.50f, 0.35f); // Darker wood
+    glLineWidth(2.0);
+    glBegin(GL_LINE_LOOP);
+    glVertex2f(x, y);
+    glVertex2f(x + width, y);
+    glVertex2f(x + width, y + height);
+    glVertex2f(x, y + height);
+    glEnd();
+    
+    // Table legs
+    glColor3f(0.52f, 0.40f, 0.25f); // Dark wood
+    float leg_width = width * 0.05f;
+    float leg_height = height * 0.7f;
+    
+    // Front legs
+    glBegin(GL_QUADS);
+    glVertex2f(x + width*0.1f, y - leg_height);
+    glVertex2f(x + width*0.1f + leg_width, y - leg_height);
+    glVertex2f(x + width*0.1f + leg_width, y);
+    glVertex2f(x + width*0.1f, y);
+    
+    glVertex2f(x + width*0.9f - leg_width, y - leg_height);
+    glVertex2f(x + width*0.9f, y - leg_height);
+    glVertex2f(x + width*0.9f, y);
+    glVertex2f(x + width*0.9f - leg_width, y);
+    glEnd();
+    
+    // Table label
+    glColor3f(0.2f, 0.2f, 0.2f);
+    drawText(x + width/2 - 40, y + height + 15, label);
+}
+
+void drawProductTables() {
+    for (int i = 0; i < PRODUCT_TYPES; i++) {
+        drawTable(display_tables[i].x, display_tables[i].y,
+                 display_tables[i].width, display_tables[i].height,
+                 display_tables[i].label);
+    }
+}
+
+void drawStaffMember(float x, float y, int type, int busy) {
+    // Body
+    switch(type) {
+        case CHEF:
+            glColor3f(0.9f, 0.2f, 0.2f); // Red for chefs
+            break;
+        case BAKER:
+            glColor3f(0.2f, 0.2f, 0.8f); // Blue for bakers
+            break;
+        case SELLER:
+            glColor3f(0.2f, 0.8f, 0.2f); // Green for sellers
+            break;
+    }
+    
+    // Body
+    glBegin(GL_QUADS);
+    glVertex2f(x - 12, y);
+    glVertex2f(x + 12, y);
+    glVertex2f(x + 12, y - 30);
+    glVertex2f(x - 12, y - 30);
+    glEnd();
+    
+    // Head
+    glColor3f(1.0f, 0.85f, 0.7f); // Skin tone
+    glBegin(GL_POLYGON);
+    for (int i = 0; i < 360; i += 20) {
+        float angle = i * 3.14159f / 180.0f;
+        glVertex2f(x + cos(angle) * 10, y + 15 + sin(angle) * 10);
+    }
+    glEnd();
+    
+    // Hat/accessory based on type
+    glColor3f(1.0f, 1.0f, 1.0f); // White for all hats
+    if (type == CHEF) {
+        // Chef's hat
+        glBegin(GL_POLYGON);
+        glVertex2f(x - 12, y + 20);
+        glVertex2f(x + 12, y + 20);
+        glVertex2f(x + 8, y + 35);
+        glVertex2f(x - 8, y + 35);
+        glEnd();
+    } else if (type == BAKER) {
+        // Baker's cap
+        glBegin(GL_QUADS);
+        glVertex2f(x - 10, y + 15);
+        glVertex2f(x + 10, y + 15);
+        glVertex2f(x + 10, y + 25);
+        glVertex2f(x - 10, y + 25);
+        glEnd();
+    } else {
+        // Seller's apron
+        glBegin(GL_TRIANGLES);
+        glVertex2f(x - 12, y);
+        glVertex2f(x + 12, y);
+        glVertex2f(x, y - 15);
+        glEnd();
+    }
+    
+    // Activity indicator
+    if (busy) {
+        glColor3f(1.0f, 0.8f, 0.0f);
+        glPointSize(6.0);
+        glBegin(GL_POINTS);
+        glVertex2f(x + 15, y + 5);
+        glEnd();
+    }
+}
+
+// [Rest of the functions (drawCustomer, drawProduct, update, addCustomer, 
+// addProduct, updateCustomer, updateProducts, updateStaff, drawResources, 
+// drawStatus, drawText) remain similar to previous versions but adjusted 
+// for the new layout]
+
+
+
 
 void update(int value) {
     if (bakery.simulation_running) {
@@ -251,15 +463,20 @@ void addCustomer() {
 
 void addProduct() {
     for (int i = 0; i < MAX_PRODUCTS; i++) {
-        if (!bakery.products[i].freshness) {
+        if (bakery.products[i].freshness <= 0) {  // Find an empty slot
             int type = rand() % PRODUCT_TYPES;
             bakery.products[i].type = type;
             bakery.products[i].freshness = 100;
             
-            // Position product on its designated table
-            ProductTable table = tables[type];
-            bakery.products[i].x = table.x + 20 + rand() % (int)(table.width - 40);
-            bakery.products[i].y = table.y + 30 + rand() % 40;
+            // Get the correct display table for this product type
+            Table table = display_tables[type];
+            
+            // Calculate positions within table boundaries
+            float padding = 15.0f;
+            bakery.products[i].x = table.x + padding + 
+                                 (rand() % (int)(table.width - 2*padding));
+            bakery.products[i].y = table.y + padding + 
+                                 (rand() % (int)(table.height - 2*padding));
             
             return;
         }
@@ -278,7 +495,7 @@ void updateCustomer(Customer *c) {
                 c->progress = 0;
                 // Head toward a random table
                 int table = rand() % PRODUCT_TYPES;
-                c->x = tables[table].x + tables[table].width/2;
+                c->x = prep_tables[table].x + prep_tables[table].width/2;
             }
             break;
             
@@ -305,7 +522,7 @@ void updateCustomer(Customer *c) {
                         if (bakery.products[i].freshness > 0) {
                             // Find which table they're nearest to
                             for (int t = 0; t < PRODUCT_TYPES; t++) {
-                                if (fabs(c->x - tables[t].x - tables[t].width/2) < tables[t].width/2) {
+                                if (fabs(c->x - prep_tables[t].x - prep_tables[t].width/2) < prep_tables[t].width/2) {
                                     if (bakery.products[i].type == t) {
                                         bakery.products[i].freshness = 0;
                                         break;
@@ -338,44 +555,75 @@ void updateProducts() {
     }
 }
 
-void drawProductTables() {
-    for (int i = 0; i < PRODUCT_TYPES; i++) {
-        ProductTable table = tables[i];
-        
-        // Table top
-        glColor3f(0.6f, 0.4f, 0.2f); // Wood color
-        glBegin(GL_QUADS);
-        glVertex2f(table.x, table.y);
-        glVertex2f(table.x + table.width, table.y);
-        glVertex2f(table.x + table.width, table.y + 20);
-        glVertex2f(table.x, table.y + 20);
-        glEnd();
-        
-        // Table legs
-        glColor3f(0.4f, 0.3f, 0.2f); // Darker wood
-        glBegin(GL_QUADS);
-        // Left leg
-        glVertex2f(table.x + 10, table.y);
-        glVertex2f(table.x + 20, table.y);
-        glVertex2f(table.x + 20, table.y - 40);
-        glVertex2f(table.x + 10, table.y - 40);
-        // Right leg
-        glVertex2f(table.x + table.width - 20, table.y);
-        glVertex2f(table.x + table.width - 10, table.y);
-        glVertex2f(table.x + table.width - 10, table.y - 40);
-        glVertex2f(table.x + table.width - 20, table.y - 40);
-        glEnd();
-        
-        // Table label
-        glColor3f(0.0f, 0.0f, 0.0f);
-        drawText(table.x + table.width/2 - 30, table.y + 30, table.label);
-    }
-}
 
 void drawProducts() {
+    // Organize products by type first for better table arrangement
+    int products_per_type[PRODUCT_TYPES] = {0};
+    
+    // Count products per type
     for (int i = 0; i < MAX_PRODUCTS; i++) {
         if (bakery.products[i].freshness > 0) {
-            drawProduct(bakery.products[i].x, bakery.products[i].y, bakery.products[i].type);
+            products_per_type[bakery.products[i].type]++;
+        }
+    }
+    
+    // Draw products with organized positioning
+    for (int t = 0; t < PRODUCT_TYPES; t++) {
+        Table table = display_tables[t];
+        int products_on_table = 0;
+        
+        for (int i = 0; i < MAX_PRODUCTS; i++) {
+            if (bakery.products[i].freshness > 0 && bakery.products[i].type == t) {
+                // Calculate grid position if multiple products on same table
+                int max_per_row = 3;
+                float x_spacing = table.width / (max_per_row + 1);
+                float y_spacing = table.height / 2;
+                
+                if (products_per_type[t] > max_per_row) {
+                    // Grid layout for crowded tables
+                    int row = products_on_table / max_per_row;
+                    int col = products_on_table % max_per_row;
+                    bakery.products[i].x = table.x + (col + 1) * x_spacing;
+                    bakery.products[i].y = table.y + (row + 1) * y_spacing/2;
+                } else {
+                    // Center items when few products
+                    bakery.products[i].x = table.x + table.width/2;
+                    bakery.products[i].y = table.y + table.height/2;
+                }
+                
+                // Draw the product
+                drawProduct(bakery.products[i].x, bakery.products[i].y, t);
+                
+                // Draw freshness indicator
+                glColor3f(0.3f, 0.3f, 0.3f);
+                glBegin(GL_LINE_LOOP);
+                glVertex2f(bakery.products[i].x - 8, bakery.products[i].y + 12);
+                glVertex2f(bakery.products[i].x + 8, bakery.products[i].y + 12);
+                glVertex2f(bakery.products[i].x + 8, bakery.products[i].y + 14);
+                glVertex2f(bakery.products[i].x - 8, bakery.products[i].y + 14);
+                glEnd();
+                
+                // Freshness level (green -> yellow -> red)
+                float freshness = bakery.products[i].freshness/100.0f;
+                if (freshness > 0.6f) {
+                    glColor3f(0.0f, 1.0f, 0.0f);  // Green
+                } else if (freshness > 0.3f) {
+                    glColor3f(1.0f, 1.0f, 0.0f);  // Yellow
+                } else {
+                    glColor3f(1.0f, 0.0f, 0.0f);  // Red
+                }
+                
+                glBegin(GL_QUADS);
+                glVertex2f(bakery.products[i].x - 7, bakery.products[i].y + 13);
+                glVertex2f(bakery.products[i].x - 7 + freshness*14, 
+                          bakery.products[i].y + 13);
+                glVertex2f(bakery.products[i].x - 7 + freshness*14, 
+                          bakery.products[i].y + 14);
+                glVertex2f(bakery.products[i].x - 7, bakery.products[i].y + 14);
+                glEnd();
+                
+                products_on_table++;
+            }
         }
     }
 }
@@ -479,11 +727,6 @@ void drawProduct(float x, float y, int type) {
     }
 }
 
-// [Rest of the drawing functions (drawCustomer, drawBaker, drawBakery, 
-// drawResources, drawStaff, drawStatus, drawText) remain similar to previous version]
-
-
-
 void drawCustomer(float x, float y, int mood) {
     // Head
     switch(mood) {
@@ -554,46 +797,6 @@ void drawCustomer(float x, float y, int mood) {
     }
 }
 
-void drawBaker(float x, float y, int type) {
-    // Body
-    glColor3f(0.8f, 0.6f, 0.4f);
-    glBegin(GL_QUADS);
-    glVertex2f(x - 15, y);
-    glVertex2f(x + 15, y);
-    glVertex2f(x + 15, y - 40);
-    glVertex2f(x - 15, y - 40);
-    glEnd();
-    
-    // Head
-    glColor3f(1.0f, 0.8f, 0.6f);
-    glBegin(GL_POLYGON);
-    for (int i = 0; i < 360; i += 20) {
-        float angle = i * 3.14159f / 180.0f;
-        glVertex2f(x + cos(angle) * 12, y + 15 + sin(angle) * 12);
-    }
-    glEnd();
-    
-    // Hat based on type
-    switch(type) {
-        case 0: // Bread baker
-            glColor3f(0.3f, 0.2f, 0.1f);
-            break;
-        case 1: // Cake baker
-            glColor3f(0.9f, 0.9f, 0.9f);
-            break;
-        case 2: // Pastry chef
-            glColor3f(0.8f, 0.5f, 0.2f);
-            break;
-    }
-    glBegin(GL_QUADS);
-    glVertex2f(x - 15, y + 20);
-    glVertex2f(x + 15, y + 20);
-    glVertex2f(x + 10, y + 30);
-    glVertex2f(x - 10, y + 30);
-    glEnd();
-}
-
-
 
 void drawCustomers() {
     for (int i = 0; i < MAX_CUSTOMERS; i++) {
@@ -603,59 +806,11 @@ void drawCustomers() {
     }
 }
 
-void drawStaff() {
-    // Draw bakers
-    for (int i = 0; i < bakery.bakers; i++) {
-        drawBaker(150 + i * 100, 500, i % 3);
-    }
-    
-    // Draw sellers
-    glColor3f(0.2f, 0.8f, 0.2f);
-    for (int i = 0; i < bakery.sellers; i++) {
-        drawBaker(700 + i * 80, 500, 0);
-    }
-}
 
 
 
-void drawBakery() {
-    // Building
-    glColor3f(0.8f, 0.6f, 0.4f);
-    glBegin(GL_QUADS);
-    glVertex2f(50, 50);
-    glVertex2f(950, 50);
-    glVertex2f(950, 550);
-    glVertex2f(50, 550);
-    glEnd();
-    
-    // Roof
-    glColor3f(0.5f, 0.2f, 0.1f);
-    glBegin(GL_TRIANGLES);
-    glVertex2f(30, 550);
-    glVertex2f(970, 550);
-    glVertex2f(500, 650);
-    glEnd();
-    
-    // Door
-    glColor3f(0.4f, 0.2f, 0.0f);
-    glBegin(GL_QUADS);
-    glVertex2f(450, 50);
-    glVertex2f(550, 50);
-    glVertex2f(550, 200);
-    glVertex2f(450, 200);
-    glEnd();
-    
-    // Windows
-    glColor3f(0.7f, 0.9f, 1.0f);
-    for (int i = 0; i < 6; i++) {
-        glBegin(GL_QUADS);
-        glVertex2f(100 + i*150, 400);
-        glVertex2f(180 + i*150, 400);
-        glVertex2f(180 + i*150, 500);
-        glVertex2f(100 + i*150, 500);
-        glEnd();
-    }
-}
+
+
 
 void drawResources() {
     const char* resource_names[] = {"Wheat", "Yeast", "Butter", "Milk", "Sugar/Salt", "Sweet Items", "Cheese", "Salami"};
@@ -705,23 +860,23 @@ void drawStatus() {
     
     glColor3f(0.0f, 0.0f, 0.0f);
     sprintf(buffer, "Profit: $%.2f", bakery.profit);
-    drawText(800, 750, buffer);
+    drawText(1000, 750, buffer);
     
     sprintf(buffer, "Served: %d", bakery.customers_served);
-    drawText(800, 725, buffer);
+    drawText(1000, 725, buffer);
     
     sprintf(buffer, "Frustrated: %d", bakery.customers_frustrated);
-    drawText(800, 700, buffer);
+    drawText(1000, 700, buffer);
     
     sprintf(buffer, "Complaints: %d", bakery.customers_complained);
-    drawText(800, 675, buffer);
+    drawText(1000, 675, buffer);
     
     if (bakery.simulation_running) {
         glColor3f(0.0f, 0.8f, 0.0f);
-        drawText(800, 650, "Status: Running");
+        drawText(1000, 650, "Status: Running");
     } else {
         glColor3f(0.8f, 0.0f, 0.0f);
-        drawText(800, 650, "Status: Stopped");
+        drawText(1000, 650, "Status: Stopped");
     }
 }
 
