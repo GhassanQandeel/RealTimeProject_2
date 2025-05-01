@@ -19,7 +19,9 @@ void attach_shm_basic_items();
 void deattach_shm(int shmid, char *ptr);
 void deattach_all_shm();
 
-void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add);
+int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add);
+void do_work(int* bread_catagories_sem_id , char** bread_catagories_shm_ptr);
+
 void decode_shm_sem_message(const char* message, int* shm_ids, int* sem_ids, int max_count);
 void attach_shm_segments(int* shm_ids, char** shm_ptrs, int count);
 void detach_shm_segments(char** shm_ptrs, int count);
@@ -84,12 +86,12 @@ int main(int argc, char **argv) {
 
     attach_shm_segments(bread_catagories_shm_id,bread_catagories_shm_ptr, config.bread_catagories_number);
     	
-    	
-    printf("BREADS SHM :\n");
-    print_array(bread_catagories_shm_id,config.bread_catagories_number);
-    printf("BREADS sem :\n");
-    print_array(bread_catagories_sem_id,config.bread_catagories_number);
-       
+
+    while(1)
+    do_work(bread_catagories_sem_id,bread_catagories_shm_ptr);
+    
+
+   
        
     
     detach_shm_segments(bread_catagories_shm_ptr, config.bread_catagories_number);
@@ -163,61 +165,54 @@ void deattach_shm(int shmid, char *ptr) {
     }
    
 }
-
-void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
+int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
     static int read_count = 0; // Track number of readers inside this function
-
-    printf("[DEBUG] File path: sandwiches \n");
+    printf("[DEBUG] File path:  paste \n");
     printf("[DEBUG] Starting modify_shared_int()...\n");
 
     // --- Start Reader-Writer synchronization (like your reader) ---
 
     // Acquire mutex to protect read_count
     struct sembuf op_wait_mutex = {MUTEX, -1, SEM_UNDO};
-    printf("[DEBUG] Locking MUTEX to protect read_count\n");
     semop(sem_id, &op_wait_mutex, 1);
 
     read_count++;
-    printf("[DEBUG] Incremented read_count: %d\n", read_count);
+    
     if (read_count == 1) {
         // First reader locks write lock
         struct sembuf op_wait_write_lock = {WRITE_LOCK, -1, SEM_UNDO};
-        printf("[DEBUG] First reader locking WRITE_LOCK\n");
+        
         semop(sem_id, &op_wait_write_lock, 1);
     }
 
     // Release mutex
     struct sembuf op_release_mutex = {MUTEX, 1, SEM_UNDO};
-    printf("[DEBUG] Releasing MUTEX\n");
+    
     semop(sem_id, &op_release_mutex, 1);
 
     // --- Critical Section: Reading value ---
     int current_value = *((int *)shm_ptr);  // Read int from shared memory
     printf("[DEBUG] Read value from shared memory: %d\n", current_value);
-
     // --- End Reading ---
 
     // Acquire mutex again to safely modify read_count
-    printf("[DEBUG] Locking MUTEX again to modify read_count\n");
+    
     semop(sem_id, &op_wait_mutex, 1);
 
     read_count--;
-    printf("[DEBUG] Decremented read_count: %d\n", read_count);
+    
     if (read_count == 0) {
         // Last reader releases write lock
         struct sembuf op_release_write_lock = {WRITE_LOCK, 1, SEM_UNDO};
-        printf("[DEBUG] Last reader releasing WRITE_LOCK\n");
         semop(sem_id, &op_release_write_lock, 1);
     }
 
-    printf("[DEBUG] Releasing MUTEX after modifying read_count\n");
     semop(sem_id, &op_release_mutex, 1);
 
     // --- Now become a Writer to modify shared memory ---
 
     // Acquire write lock
     struct sembuf op_wait_write_lock2 = {WRITE_LOCK, -1, SEM_UNDO};
-    printf("[DEBUG] Locking WRITE_LOCK for writing\n");
     semop(sem_id, &op_wait_write_lock2, 1);
 
     // Modify value
@@ -227,9 +222,36 @@ void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
 
     // Release write lock
     struct sembuf op_release_write_lock2 = {WRITE_LOCK, 1, SEM_UNDO};
-    printf("[DEBUG] Releasing WRITE_LOCK after writing\n");
     semop(sem_id, &op_release_write_lock2, 1);
-
     printf("[DEBUG] Finished modify_shared_int()\n\n");
+    return current_value;
+
 }
 
+void do_work(int* bread_catagories_sem_id , char** bread_catagories_shm_ptr) {
+    //random time to  achive the code 
+    int processing_time = (rand() % 6) + 1;
+    
+    //random amount to take (between 1-3 units)
+    int amount = (rand() % 3) + 1;
+    
+    
+    if (modify_shared_int(sem_paste_id, shm_paste_ptr, -amount) <= 0) {
+        sleep(2);
+    }
+    
+    
+    
+
+    // Simulate processing time
+    sleep(processing_time);
+
+
+
+    for (int i = 0; i < config.bread_catagories_number; i++)
+    {
+        modify_shared_int(bread_catagories_sem_id[i], bread_catagories_shm_ptr[i], amount*2);
+        
+    
+    }
+    }

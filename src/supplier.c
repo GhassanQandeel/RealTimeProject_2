@@ -6,8 +6,8 @@
 #include <sys/sem.h>
 #include <sys/wait.h>
 #include <string.h>
-
-
+#include <stdbool.h>
+#include <time.h>
 
 
 
@@ -23,7 +23,7 @@ void attach_shm_basic_items();
 void deattach_shm(int shmid, char *ptr);
 void deattach_all_shm();
 void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add);
-
+void positive_random_updater();
 
 union semun {
     int val;
@@ -69,8 +69,7 @@ int main(int argc, char **argv) {
     attach_shm_basic_items();
     
     
-    //modify_shared_int(sem_wheat_id,shm_wheat_ptr, 3);
-    /*Do your code */
+    positive_random_updater();
     
     deattach_all_shm();
     printf("From Supplier :Current Process ID: %d\n", pid);
@@ -179,28 +178,24 @@ void deattach_all_shm() {
 
 void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
     static int read_count = 0; // Track number of readers inside this function
-    printf("[DEBUG] File path: paste \n");
+    printf("[DEBUG] File path : Supplier  \n");
     printf("[DEBUG] Starting modify_shared_int()...\n");
 
     // --- Start Reader-Writer synchronization (like your reader) ---
 
     // Acquire mutex to protect read_count
     struct sembuf op_wait_mutex = {MUTEX, -1, SEM_UNDO};
-    printf("[DEBUG] Locking MUTEX to protect read_count\n");
     semop(sem_id, &op_wait_mutex, 1);
 
     read_count++;
-    printf("[DEBUG] Incremented read_count: %d\n", read_count);
     if (read_count == 1) {
         // First reader locks write lock
         struct sembuf op_wait_write_lock = {WRITE_LOCK, -1, SEM_UNDO};
-        printf("[DEBUG] First reader locking WRITE_LOCK\n");
         semop(sem_id, &op_wait_write_lock, 1);
     }
 
     // Release mutex
     struct sembuf op_release_mutex = {MUTEX, 1, SEM_UNDO};
-    printf("[DEBUG] Releasing MUTEX\n");
     semop(sem_id, &op_release_mutex, 1);
 
     // --- Critical Section: Reading value ---
@@ -210,26 +205,26 @@ void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
     // --- End Reading ---
 
     // Acquire mutex again to safely modify read_count
-    printf("[DEBUG] Locking MUTEX again to modify read_count\n");
+    
     semop(sem_id, &op_wait_mutex, 1);
 
     read_count--;
-    printf("[DEBUG] Decremented read_count: %d\n", read_count);
+    
     if (read_count == 0) {
         // Last reader releases write lock
         struct sembuf op_release_write_lock = {WRITE_LOCK, 1, SEM_UNDO};
-        printf("[DEBUG] Last reader releasing WRITE_LOCK\n");
+        
         semop(sem_id, &op_release_write_lock, 1);
     }
 
-    printf("[DEBUG] Releasing MUTEX after modifying read_count\n");
+    
     semop(sem_id, &op_release_mutex, 1);
 
     // --- Now become a Writer to modify shared memory ---
 
     // Acquire write lock
     struct sembuf op_wait_write_lock2 = {WRITE_LOCK, -1, SEM_UNDO};
-    printf("[DEBUG] Locking WRITE_LOCK for writing\n");
+    
     semop(sem_id, &op_wait_write_lock2, 1);
 
     // Modify value
@@ -239,9 +234,66 @@ void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
 
     // Release write lock
     struct sembuf op_release_write_lock2 = {WRITE_LOCK, 1, SEM_UNDO};
-    printf("[DEBUG] Releasing WRITE_LOCK after writing\n");
+    
     semop(sem_id, &op_release_write_lock2, 1);
 
     printf("[DEBUG] Finished modify_shared_int()\n\n");
 }
+
+
+void positive_random_updater() {
+    srand(time(0));
+    
+    // Array of all possible shared memory configurations
+    struct {
+        int sem_id;
+        char* shm_ptr;
+        const char* name;
+    } memories[] = {
+        {sem_wheat_id, shm_wheat_ptr, "WHEAT"},
+        {sem_yeast_id, shm_yeast_ptr, "YEAST"},
+        {sem_butter_id, shm_butter_ptr, "BUTTER"},
+        {sem_milk_id, shm_milk_ptr, "MILK"},
+        {sem_sugar_id, shm_sugar_ptr, "SUGAR"},
+        {sem_salt_id, shm_salt_ptr, "SALT"},
+        {sem_sweet_items_id, shm_sweet_items_ptr, "SWEET_ITEMS"},
+        {sem_cheese_id, shm_cheese_ptr, "CHEESE"},
+        {sem_salami_id, shm_salami_ptr, "SALAMI"}
+    };
+    const int num_memories = sizeof(memories) / sizeof(memories[0]);
+
+    while (true) {
+        // Determine how many memories to update (1 to all)
+        int num_to_update = (rand() % num_memories) + 1;
+        
+        bool update_mask[num_memories];
+            for (int i = 0; i < num_memories; i++) {
+            update_mask[i] = false;
+        }
+        for (int i = 0; i < num_to_update; i++) {
+            int idx;
+            do {
+                idx = rand() % num_memories;
+            } while (update_mask[idx]); // Ensure we don't select the same one twice
+            update_mask[idx] = true;
+        }
+
+        // Determine value to add (1-10)
+        int value = (rand() % 10) + 1;
+        
+        // Update all selected memories
+        for (int i = 0; i < num_memories; i++) {
+            if (update_mask[i]) {
+                modify_shared_int(memories[i].sem_id, memories[i].shm_ptr, value);
+                printf("Added %d to %s. New value: %d\n", 
+                       value, memories[i].name, *((int*)memories[i].shm_ptr));
+            }
+        }
+
+        // Determine sleep time (1-10 seconds)
+        int sleep_time = (rand() % 10) + 1;
+        sleep(sleep_time);
+    }
+}
+
 
