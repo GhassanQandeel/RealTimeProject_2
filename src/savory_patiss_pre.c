@@ -60,6 +60,10 @@ char *shm_savory_patiss_paste_ptr;
 
 int sem_savory_patiss_paste_id;
 
+int shm_paste_id;
+char *shm_paste_ptr;
+
+int sem_paste_id;
 
 int main(int argc, char **argv) {
 
@@ -68,6 +72,8 @@ int main(int argc, char **argv) {
 
     parse_ids(argv[2]);
     sscanf(argv[3], "%d %d", &shm_savory_patiss_paste_id, &sem_savory_patiss_paste_id);
+    sscanf(argv[4], "%d %d", &shm_paste_id, &sem_paste_id);
+    
     attach_shm_basic_items();
     
    
@@ -159,7 +165,11 @@ void attach_shm_basic_items() {
         perror("shmat savory patiss failed");
         exit(1);
     }
-    
+    shm_paste_ptr= (char *)shmat(shm_paste_id, NULL, 0);
+    if (shm_paste_ptr == (char *)-1) {
+        perror("shmat salami failed");
+        exit(1);
+    }
     
     
 }
@@ -181,6 +191,8 @@ void deattach_all_shm() {
     deattach_shm(shm_cheese_id, shm_cheese_ptr);
     deattach_shm(shm_salami_id, shm_salami_ptr); 
     deattach_shm(shm_savory_patiss_paste_id, shm_savory_patiss_paste_ptr); 
+    deattach_shm(shm_paste_id, shm_paste_ptr);
+
 }
 void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
     static int read_count = 0; // Track number of readers inside this function

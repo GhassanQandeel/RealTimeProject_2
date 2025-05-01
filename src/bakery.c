@@ -363,11 +363,11 @@ int main(int argc, char **argv)
         
         cleanup_shm_sem_basic_items();
         cleanup_shm_sem_for_sale(bread_catagories_shm_id,bread_catagories_sem_id,bread_catagories_shm_ptr,
-	sandwiches_shm_id,sandwiches_sem_id,sandwiches_shm_ptr,
-	cake_flavors_shm_id,cake_flavors_sem_id,cake_flavors_shm_ptr,
-	sweets_flavors_shm_id,sweets_flavors_sem_id,sweets_flavors_shm_ptr,
-	sweet_patisseries_shm_id,sweet_patisseries_sem_id,sweet_patisseries_shm_ptr,
-	savory_patisseries_shm_id,savory_patisseries_sem_id,savory_patisseries_shm_ptr);
+	        sandwiches_shm_id,sandwiches_sem_id,sandwiches_shm_ptr,
+	        cake_flavors_shm_id,cake_flavors_sem_id,cake_flavors_shm_ptr,
+	        sweets_flavors_shm_id,sweets_flavors_sem_id,sweets_flavors_shm_ptr,
+	        sweet_patisseries_shm_id,sweet_patisseries_sem_id,sweet_patisseries_shm_ptr,
+	        savory_patisseries_shm_id,savory_patisseries_sem_id,savory_patisseries_shm_ptr);
 	
 		              
         kill_teams(chefs_pids, bakers_pids,sallers_pids,suppliers_pids,customers_pids);
@@ -427,7 +427,10 @@ void fork_chefs(pid_t chefs_pids[],pid_t paste_team_pids[],pid_t cake_team_pids[
 
             if (counter == 0)
             {
-                execlp("bin/paste_pre", "bin/paste_pre", config_file_name, basic_items_message, chef_production_message[0], NULL);
+                execlp("bin/paste_pre", "bin/paste_pre",
+                    config_file_name,
+                    basic_items_message,
+                    chef_production_message[0], NULL);
                 perror("execlp failed for paste");
                 exit(EXIT_FAILURE);
             }
@@ -456,13 +459,23 @@ void fork_chefs(pid_t chefs_pids[],pid_t paste_team_pids[],pid_t cake_team_pids[
             }
             if (counter == 4)
             {
-                execlp("bin/sweet_patiss_pre", "bin/sweet_patiss_pre", config_file_name, basic_items_message, chef_production_message[4], NULL);
+                execlp("bin/sweet_patiss_pre",
+                    "bin/sweet_patiss_pre",
+                    config_file_name,
+                    basic_items_message,
+                    chef_production_message[4],
+                    chef_production_message[0], NULL);
                 perror("execlp failed for chef");
                 exit(EXIT_FAILURE);
             }
             if (counter == 5)
             {
-                execlp("bin/savory_patiss_pre", "bin/savory_patiss_pre", config_file_name, basic_items_message, chef_production_message[5], NULL);
+                execlp("bin/savory_patiss_pre",
+                    "bin/savory_patiss_pre",
+                    config_file_name,
+                    basic_items_message, 
+                    chef_production_message[5],
+                    chef_production_message[0],NULL);
                 perror("execlp failed for chef");
                 exit(EXIT_FAILURE);
             }

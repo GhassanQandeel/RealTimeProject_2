@@ -23,6 +23,9 @@ void attach_shm_basic_items();
 void deattach_shm(int shmid, char *ptr);
 void deattach_all_shm();
 void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add);
+void do_work();
+
+
 
 
 union semun {
@@ -65,10 +68,11 @@ int sem_salami_id;
 int shm_paste_id;
 char *shm_paste_ptr;
 
-
-
 int sem_paste_id;
 
+
+    
+    
 
 
 
@@ -83,7 +87,7 @@ int main(int argc, char **argv) {
     attach_shm_basic_items();
     
     
-    //modify_shared_int(sem_wheat_id,shm_wheat_ptr, 3);
+    Modify_shared_int(sem_wheat_id,shm_wheat_ptr, 3);
     /*Do your code */
     
     deattach_all_shm();
@@ -135,13 +139,6 @@ void attach_shm_basic_items() {
         exit(1);
     }
 
-    // Sugar
-    shm_sugar_ptr = (char *)shmat(shm_sugar_id, NULL, 0);
-    if (shm_sugar_ptr == (char *)-1) {
-        perror("shmat sugar failed");
-        exit(1);
-    }
-
     // Salt
     shm_salt_ptr = (char *)shmat(shm_salt_id, NULL, 0);
     if (shm_salt_ptr == (char *)-1) {
@@ -149,26 +146,8 @@ void attach_shm_basic_items() {
         exit(1);
     }
 
-    // Sweet Items
-    shm_sweet_items_ptr = (char *)shmat(shm_sweet_items_id, NULL, 0);
-    if (shm_sweet_items_ptr == (char *)-1) {
-        perror("shmat sweet items failed");
-        exit(1);
-    }
+    
 
-    // Cheese
-    shm_cheese_ptr = (char *)shmat(shm_cheese_id, NULL, 0);
-    if (shm_cheese_ptr == (char *)-1) {
-        perror("shmat cheese failed");
-        exit(1);
-    }
-
-    // Salami
-    shm_salami_ptr = (char *)shmat(shm_salami_id, NULL, 0);
-    if (shm_salami_ptr == (char *)-1) {
-        perror("shmat salami failed");
-        exit(1);
-    }
     shm_paste_ptr= (char *)shmat(shm_paste_id, NULL, 0);
     if (shm_paste_ptr == (char *)-1) {
         perror("shmat salami failed");
@@ -188,11 +167,7 @@ void deattach_all_shm() {
     deattach_shm(shm_yeast_id, shm_yeast_ptr);
     deattach_shm(shm_butter_id, shm_butter_ptr);
     deattach_shm(shm_milk_id, shm_milk_ptr);
-    deattach_shm(shm_sugar_id, shm_sugar_ptr);
     deattach_shm(shm_salt_id, shm_salt_ptr);
-    deattach_shm(shm_sweet_items_id, shm_sweet_items_ptr);
-    deattach_shm(shm_cheese_id, shm_cheese_ptr);
-    deattach_shm(shm_salami_id, shm_salami_ptr);
     deattach_shm(shm_paste_id, shm_paste_ptr);  
 }
 
@@ -264,3 +239,24 @@ void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
     printf("[DEBUG] Finished modify_shared_int()\n\n");
 }
 
+void do_work() {
+    //random time to  achive the code 
+    int processing_time = (rand() % 6) + 1;
+    
+    //random amount to take (between 1-3 units)
+    int amount = (rand() % 3) + 1;
+    
+    // Take from the ingredient (decrease)
+    Modify_shared_int(sem_wheat_id , shm_wheat_ptr ,-amount);
+    Modify_shared_int(sem_yeast_id , shm_yeast_ptr ,-amount);
+    Modify_shared_int(sem_butter_id , shm_butter_ptr ,-amount);
+    Modify_shared_int(sem_milk_id , shm_milk_ptr ,-amount);
+    Modify_shared_int(sem_salt_id , shm_salt_ptr ,-amount);
+    
+    
+    // Simulate processing time
+    sleep(processing_time);
+    
+    // Add to paste (increase)
+    Modify_shared_int(sem_paste_id, shm_paste_ptr, amount*2);
+    }
