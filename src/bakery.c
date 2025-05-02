@@ -43,56 +43,14 @@
 
 
 
-/*basic Items message buffer */
-#define MAX_BUFFER_SIZE 1024
-
-
 
 /*Configuration*/
 Config config;
 char config_file_name[30];
-
-
-/*Shared memory ID and semaphore id for each basic items (milk yasset ....)*/
-
-
-int shm_wheat_id;
-char *shm_wheat_ptr;
-int shm_yeast_id;
-char *shm_yeast_ptr;
-int shm_butter_id;
-char *shm_butter_ptr;
-int shm_milk_id;
-char *shm_milk_ptr;
-int shm_sugar_id;
-char *shm_sugar_ptr;
-int shm_salt_id;
-char *shm_salt_ptr;
-int shm_sweet_items_id;
-char *shm_sweet_items_ptr;
-int shm_cheese_id;
-char *shm_cheese_ptr;
-int shm_salami_id;
-char *shm_salami_ptr;
-
-int sem_wheat_id;
-int sem_yeast_id;
-int sem_butter_id;
-int sem_milk_id;
-int sem_sugar_id;
-int sem_salt_id;
-int sem_sweet_items_id;
-int sem_cheese_id;
-int sem_salami_id;
-
+pid_t opengl_pid;
 
 /*basic Items message buffer */
 #define MAX_BUFFER_SIZE 1024
-
-/*Configuration*/
-Config config;
-char config_file_name[30];
-
 /*Shared memory ID and semaphore id for each basic items (milk yasset ....)*/
 
 int shm_wheat_id;
@@ -336,11 +294,11 @@ int main(int argc, char **argv)
         
         //write_shared_int(sem_wheat_id, shm_wheat_ptr, 15);
         //fork_chefs(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids,savory_patiss_team_pids);
-	    fork_bakers( bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
+	    //fork_bakers( bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
         fork_opengl_process();
 
 	    //fork_sallers(sallers_pids);
-	    fork_suppliers(suppliers_pids);
+	    //fork_suppliers(suppliers_pids);
         //fork_customers(customers_pids,sallers_pids);
        
        
@@ -693,13 +651,13 @@ void kill_process(pid_t pid)
 // Function to clean up by killing all processes
 void kill_teams(pid_t chefs_pids[] , pid_t baker_pids[], pid_t sallers_pids[], pid_t suppliers_pids[], pid_t customers_pids[]) {
     // Kill chefs processes
-
+/*
     for (int i = 0; i < config.chefs_number; i++)
     {
         kill_process(chefs_pids[i]);
     }
 
-    /*
+    
     
     
     // Kill bakers processes
@@ -711,11 +669,12 @@ void kill_teams(pid_t chefs_pids[] , pid_t baker_pids[], pid_t sallers_pids[], p
     for (int i = 0; i < config.sallers_number; i++) {
         kill_process(sallers_pids[i]);
     }
-     */
+     
     // Kill suppliers processes
     for (int i = 0; i < config.suppliers_number; i++) {
         kill_process(suppliers_pids[i]);
-    }
+    }*/
+    //kill_process(opengl_pid);
 }
 
 void divde_prepartion_team_members(int chef_number)
@@ -1300,28 +1259,25 @@ void initialize_shm_and_sem(
 
 //********************************************************************************
 void fork_opengl_process() {
-    pid_t opengl_pid = fork();
-    
+     opengl_pid = fork();
     if (opengl_pid == 0) {
-        // Child process - execute OpenGL program
-        // Create a message containing all shared memory and semaphore IDs
-        //char opengl_args[MAX_BUFFER_SIZE * 10]; // Large enough buffer
-        
-        // Format: config_file|basic_items|chef_prod|bread|sandwiches|cake|sweets|sweet_patiss|savory_patiss
-        execlp("../bin/bakery_opengl", "bakery_opengl", config_file_name, NULL);
-        execlp("../bin/bakery_opengl", "bakery_opengl",basic_items_message , NULL);
-        execlp("../bin/bakery_opengl", "bakery_opengl",chef_production_message[0] , NULL);
-        execlp("../bin/bakery_opengl", "bakery_opengl",chef_production_message[1] , NULL);
-        execlp("../bin/bakery_opengl", "bakery_opengl",chef_production_message[2] , NULL);
-        execlp("../bin/bakery_opengl", "bakery_opengl",chef_production_message[3] , NULL);
-        execlp("../bin/bakery_opengl", "bakery_opengl",chef_production_message[4] , NULL);
-        execlp("../bin/bakery_opengl", "bakery_opengl",chef_production_message[5] , NULL);
-        execlp("../bin/bakery_opengl", "bakery_opengl",bread_catagories_shm_sem_message , NULL);
-        execlp("../bin/bakery_opengl", "bakery_opengl",sandwiches_shm_sem_message, NULL);
-        execlp("../bin/bakery_opengl", "bakery_opengl",cake_flavors_shm_sem_message , NULL);
-        execlp("../bin/bakery_opengl", "bakery_opengl",sweets_flavors_shm_sem_message , NULL);
-        execlp("../bin/bakery_opengl", "bakery_opengl",sweet_patisseries_shm_sem_message, NULL);
-        execlp("../bin/bakery_opengl", "bakery_opengl",savory_patisseries_shm_sem_message, NULL);
+        execlp("../bin/bakery_opengl", 
+            "../bin/bakery_opengl", 
+            config_file_name, 
+            basic_items_message, 
+            chef_production_message[0], 
+            chef_production_message[1], 
+            chef_production_message[2], 
+            chef_production_message[3], 
+            chef_production_message[4], 
+            chef_production_message[5], 
+            bread_catagories_shm_sem_message, 
+            sandwiches_shm_sem_message, 
+            cake_flavors_shm_sem_message, 
+            sweets_flavors_shm_sem_message, 
+            sweet_patisseries_shm_sem_message, 
+            savory_patisseries_shm_sem_message, 
+            NULL);
         perror("execlp failed for bakery_opengl");
         exit(EXIT_FAILURE);}
         
@@ -1329,33 +1285,7 @@ void fork_opengl_process() {
             // Fork failed
             perror("fork failed for OpenGL process");
         }
-    
-        /*snprintf(opengl_args, sizeof(opengl_args),
-                "%s|%s|%s,%s,%s,%s,%s,%s|%s|%s|%s|%s|%s|%s",
-                config_file_name,
-                basic_items_message,
-                chef_production_message[0], chef_production_message[1], chef_production_message[2],
-                chef_production_message[3], chef_production_message[4], chef_production_message[5],
-                bread_catagories_shm_sem_message,
-                sandwiches_shm_sem_message,
-                cake_flavors_shm_sem_message,
-                sweets_flavors_shm_sem_message,
-                sweet_patisseries_shm_sem_message,
-                savory_patisseries_shm_sem_message);
-
-        // Execute OpenGL program with the combined message
-        execlp("../bin/bakery_opengl", "bakery_opengl", opengl_args, NULL);
-        
-        // If execlp fails
-        perror("execlp failed for bakery_opengl");
-        exit(EXIT_FAILURE);
-    }
-    else if (opengl_pid < 0) {
-        // Fork failed
-        perror("fork failed for OpenGL process");
-    }
-    // Parent continues execution
-    */
+   
 }
 /*
 

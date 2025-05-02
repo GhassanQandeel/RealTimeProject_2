@@ -11,12 +11,86 @@ Green when happy (purchased)
 Yellow when frustrated (left without buying)
 Red should appear for angry customers (complained)
 Body: Always blue (the rectangle you're seeing)*/
+// bakery_visualizer.c
 #include <GL/glut.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include "../include/config.h"
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/sem.h>
+#include <sys/wait.h>
+/*Configuration*/
+Config config;
+char config_file_name[30];
+#define MUTEX 0       // Controls access to read_count
+#define READ_COUNT 1  // Tracks number of readers
+#define WRITE_LOCK 2  // Ensures exclusive write access
+
+/*Shared memory ID and semaphore id for each basic items (milk yasset ....)*/
+
+
+int shm_wheat_id;
+char *shm_wheat_ptr;
+int shm_yeast_id;
+char *shm_yeast_ptr;
+int shm_butter_id;
+char *shm_butter_ptr;
+int shm_milk_id;
+char *shm_milk_ptr;
+int shm_sugar_id;
+char *shm_sugar_ptr;
+int shm_salt_id;
+char *shm_salt_ptr;
+int shm_sweet_items_id;
+char *shm_sweet_items_ptr;
+int shm_cheese_id;
+char *shm_cheese_ptr;
+int shm_salami_id;
+char *shm_salami_ptr;
+
+int sem_wheat_id;
+int sem_yeast_id;
+int sem_butter_id;
+int sem_milk_id;
+int sem_sugar_id;
+int sem_salt_id;
+int sem_sweet_items_id;
+int sem_cheese_id;
+int sem_salami_id;
+
+
+
+/*Chef production shm and sem */
+int shm_paste_id;
+char *shm_paste_ptr;
+
+int shm_cake_paste_id;
+char *shm_cake_paste_ptr;
+
+int shm_sandwiches_id;
+char *shm_sandwiches_ptr;
+
+int shm_sweets_paste_id;
+char *shm_sweets_paste_ptr;
+
+int shm_sweet_patiss_paste_id;
+char *shm_sweet_patiss_paste_ptr;
+
+int shm_savory_patiss_paste_id;
+char *shm_savory_patiss_paste_ptr;
+
+int sem_paste_id;
+int sem_cake_paste_id;
+int sem_sandwiches_id;
+int sem_sweets_paste_id;
+int sem_sweet_patiss_paste_id;
+int sem_savory_patiss_paste_id;
+
+
 
 #define MAX_CUSTOMERS 20
 #define MAX_PRODUCTS 50
@@ -139,15 +213,151 @@ void updateProducts();
 void updateStaff();
 void drawTable(float x, float y, float width, float height, const char* label);
 
+
+void parse_ids(const char *buffer);
+void attach_shm_basic_items();
+void deattach_shm(int shmid, char *ptr);
+void deattach_all_shm();
+
+void decode_shm_sem_message(const char* message, int* shm_ids, int* sem_ids, int max_count);
+void attach_shm_segments(int* shm_ids, char** shm_ptrs, int count);
+void detach_shm_segments(char** shm_ptrs, int count);
+
 int main(int argc, char** argv) {
+
+
+
+
+    strcpy(config_file_name, argv[1]);
+    for (int i = 0; i < argc; i++) {
+        printf("argv[%d]: %s\n", i, argv[i]);
+    }
+
+    if (argc < 8)
+    {
+        fprintf(stderr, "Usage: %s <config_file> ....\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    if (load_config(config_file_name, &config) == 0)
+    {
+        // printConfig(&config);
+        printf("Success to load configuration.\n");
+    }
+    else
+    {
+        fprintf(stderr, "Failed to load configuration.\n");
+    }
+
+
+    // For Bread Categories
+    int bread_catagories_shm_id[config.bread_catagories_number];
+    int bread_catagories_sem_id[config.bread_catagories_number];
+    char *bread_catagories_shm_ptr[config.bread_catagories_number];
+
+    // For Sandwiches
+    int sandwiches_shm_id[config.sandwiches_number];
+    int sandwiches_sem_id[config.sandwiches_number];
+    char *sandwiches_shm_ptr[config.sandwiches_number];
+
+    // For Cake Flavors
+    int cake_flavors_shm_id[config.cake_flavors_number];
+    int cake_flavors_sem_id[config.cake_flavors_number];
+    char *cake_flavors_shm_ptr[config.cake_flavors_number];
+
+    // For Sweets Flavors
+    int sweets_flavors_shm_id[config.sweets_flavors_number];
+    int sweets_flavors_sem_id[config.sweets_flavors_number];
+    char *sweets_flavors_shm_ptr[config.sweets_flavors_number];
+
+    // For Sweet Patisseries
+    int sweet_patisseries_shm_id[config.sweet_patisseries_number];
+    int sweet_patisseries_sem_id[config.sweet_patisseries_number];
+    char *sweet_patisseries_shm_ptr[config.sweet_patisseries_number];
+
+    // For Savory Patisseries
+    int savory_patisseries_shm_id[config.savory_patisseries_number];
+    int savory_patisseries_sem_id[config.savory_patisseries_number];
+    char *savory_patisseries_shm_ptr[config.savory_patisseries_number];
+
+
+
+
+
+    parse_ids(argv[2]);
+    sscanf(argv[3], "%d %d", &shm_paste_id, &sem_paste_id);
+    sscanf(argv[4], "%d %d", &shm_cake_paste_id, &sem_cake_paste_id);
+    sscanf(argv[5], "%d %d", &shm_sandwiches_id, &sem_sandwiches_id);
+    sscanf(argv[6], "%d %d", &shm_sweets_paste_id, &sem_sweets_paste_id);
+    sscanf(argv[7], "%d %d", &shm_sweet_patiss_paste_id, &sem_sweet_patiss_paste_id);
+    sscanf(argv[8], "%d %d", &shm_savory_patiss_paste_id, &sem_savory_patiss_paste_id);
+
+    // Decode shared memory and semaphore IDs for each category
+    decode_shm_sem_message(argv[9], bread_catagories_shm_id, bread_catagories_sem_id, config.bread_catagories_number);
+    decode_shm_sem_message(argv[10], sandwiches_shm_id, sandwiches_sem_id, config.sandwiches_number);
+    decode_shm_sem_message(argv[11], cake_flavors_shm_id, cake_flavors_sem_id, config.cake_flavors_number);
+    decode_shm_sem_message(argv[12], sweets_flavors_shm_id, sweets_flavors_sem_id, config.sweets_flavors_number);
+    decode_shm_sem_message(argv[13], sweet_patisseries_shm_id, sweet_patisseries_sem_id, config.sweet_patisseries_number);
+    decode_shm_sem_message(argv[14], savory_patisseries_shm_id, savory_patisseries_sem_id, config.savory_patisseries_number);
+    // Attach shared memory segments
+    attach_shm_segments(bread_catagories_shm_id, bread_catagories_shm_ptr, config.bread_catagories_number);
+    attach_shm_segments(sandwiches_shm_id, sandwiches_shm_ptr, config.sandwiches_number);
+    attach_shm_segments(cake_flavors_shm_id, cake_flavors_shm_ptr, config.cake_flavors_number);
+    attach_shm_segments(sweets_flavors_shm_id, sweets_flavors_shm_ptr, config.sweets_flavors_number);
+    attach_shm_segments(sweet_patisseries_shm_id, sweet_patisseries_shm_ptr, config.sweet_patisseries_number);
+    attach_shm_segments(savory_patisseries_shm_id, savory_patisseries_shm_ptr, config.savory_patisseries_number);
+
+
+    /*
+
+
+
+
+    int wheat_value=modify_shared_int(sem_wheat_id, shm_wheat_ptr, 0);
+    int yeast_value=modify_shared_int(sem_yeast_id, shm_yeast_ptr, 0);
+    int butter_value=modify_shared_int(sem_butter_id, shm_butter_ptr, 0);
+    int milk_value=modify_shared_int(sem_milk_id, shm_milk_ptr, 0);
+    int sugar_value=modify_shared_int(sem_sugar_id, shm_sugar_ptr, 0);
+    int salt_value=modify_shared_int(sem_salt_id, shm_salt_ptr, 0);
+    int sweet_items_value=modify_shared_int(sem_sweet_items_id, shm_sweet_items_ptr, 0);
+    int cheese_value=modify_shared_int(sem_cheese_id, shm_cheese_ptr, 0);
+    int salami_value=modify_shared_int(sem_salami_id, shm_salami_ptr, 0);
+    */
+
+    /*
+        for side bars .. start from zero then read from shared memory 
+
+        divide suger and salt to two bars like in  shared memory as in shared memory
+        
+        create  six tables for each type of product (paste,cake,sandwiches,sweets,patisseries)
+        create 3 tables for each type of product to bake it (or any think you want )(bake )
+        for patiss divide table two tables , one for seweet and one for savory  
+        make place for each type of product bread Catagories ,sweet flavors , cake flacors ,etc 
+        in each place should print the data in shared memory using the function modifiy_shared_int
+
+    */ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     srand(time(NULL));
     
     // Initialize bakery state
     memset(&bakery, 0, sizeof(BakeryState));
     bakery.simulation_running = 1;
-    bakery.chefs = 3;
-    bakery.bakers = 2;
-    bakery.sellers = 2;
+    bakery.chefs = config.chefs_number;
+    bakery.bakers = config.bakers_number;
+    bakery.sellers = config.sallers_number;
     bakery.supply_employees = 1;
     bakery.bread_categories = 3;
     bakery.sandwich_types = 2;
@@ -190,8 +400,268 @@ int main(int argc, char** argv) {
 
     init();
     glutMainLoop();
+
+    
+    deattach_all_shm();
+    detach_shm_segments(bread_catagories_shm_ptr, config.bread_catagories_number);
+    detach_shm_segments(sandwiches_shm_ptr, config.sandwiches_number);
+    detach_shm_segments(cake_flavors_shm_ptr, config.cake_flavors_number);
+    detach_shm_segments(sweets_flavors_shm_ptr, config.sweets_flavors_number);
+    detach_shm_segments(sweet_patisseries_shm_ptr, config.sweet_patisseries_number);
+    detach_shm_segments(savory_patisseries_shm_ptr, config.savory_patisseries_number);
+    // Detach shared memory segments
+
     return 0;
 }
+
+int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
+    static int read_count = 0; // Track number of readers inside this function
+    printf("[DEBUG] File path: paste \n");
+    printf("[DEBUG] Starting modify_shared_int()...\n");
+
+    // --- Start Reader-Writer synchronization (Reader only) ---
+
+    // Acquire mutex to protect read_count
+    struct sembuf op_wait_mutex = {MUTEX, -1, SEM_UNDO};
+    semop(sem_id, &op_wait_mutex, 1);
+
+    read_count++;
+
+    if (read_count == 1) {
+        // First reader locks write lock
+        struct sembuf op_wait_write_lock = {WRITE_LOCK, -1, SEM_UNDO};
+        semop(sem_id, &op_wait_write_lock, 1);
+    }
+
+    // Release mutex
+    struct sembuf op_release_mutex = {MUTEX, 1, SEM_UNDO};
+    semop(sem_id, &op_release_mutex, 1);
+
+    // --- Critical Section: Reading value ---
+    int current_value = *((int *)shm_ptr);  // Read int from shared memory
+    printf("[DEBUG] Read value from shared memory: %d\n", current_value);
+    // --- End Reading ---
+
+    // Acquire mutex again to safely modify read_count
+    semop(sem_id, &op_wait_mutex, 1);
+
+    read_count--;
+
+    if (read_count == 0) {
+        // Last reader releases write lock
+        struct sembuf op_release_write_lock = {WRITE_LOCK, 1, SEM_UNDO};
+        semop(sem_id, &op_release_write_lock, 1);
+    }
+
+    semop(sem_id, &op_release_mutex, 1);
+
+    printf("[DEBUG] Finished modify_shared_int() (Read only)\n\n");
+    return current_value;
+}
+
+void parse_ids(const char *buffer) {
+    sscanf(buffer,
+        "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+        &shm_wheat_id, &sem_wheat_id,
+        &shm_yeast_id, &sem_yeast_id,
+        &shm_butter_id, &sem_butter_id,
+        &shm_milk_id, &sem_milk_id,
+        &shm_sugar_id, &sem_sugar_id,
+        &shm_salt_id, &sem_salt_id,
+        &shm_sweet_items_id, &sem_sweet_items_id,
+        &shm_cheese_id, &sem_cheese_id,
+        &shm_salami_id, &sem_salami_id
+    );
+}
+
+void decode_shm_sem_message(const char* message, int* shm_ids, int* sem_ids, int max_count) {
+    if (message == NULL || message[0] == '\0') {
+        return;
+    }
+
+    const char* ptr = message;
+    int count = 0;
+    
+    while (*ptr != '\0' && count < max_count) {
+        // Parse shm_id
+        shm_ids[count] = atoi(ptr);
+        // Move past the number
+        while (*ptr != '\0' && *ptr != ' ') ptr++;
+        if (*ptr == ' ') ptr++;  // skip space
+        
+        // Parse sem_id
+        sem_ids[count] = atoi(ptr);
+        // Move past the number
+        while (*ptr != '\0' && *ptr != ' ') ptr++;
+        if (*ptr == ' ') ptr++;  // skip space
+        
+        count++;
+    }
+    
+   
+}
+
+
+void attach_shm_segments(int* shm_ids, char** shm_ptrs, int count) {
+    for (int i = 0; i < count; i++) {
+        shm_ptrs[i] = (char *)shmat(shm_ids[i], NULL, 0);
+        if (shm_ptrs[i] == (char *)-1) {
+            perror("shmat failed");
+            
+            // Cleanup any already attached segments
+            for (int j = 0; j < i; j++) {
+                shmdt(shm_ptrs[j]);
+            }
+            
+           
+        }
+    }
+}
+
+void detach_shm_segments(char** shm_ptrs, int count) {
+    for (int i = 0; i < count; i++) {
+        if (shm_ptrs[i] != NULL && shm_ptrs[i] != (char *)-1) {
+            if (shmdt(shm_ptrs[i]) == -1) {
+                perror("shmdt failed");
+                // Continue trying to detach others even if one fails
+            }
+        }
+    }
+}
+void attach_shm_basic_items() {
+    // Wheat
+    shm_wheat_ptr = (char *)shmat(shm_wheat_id, NULL, 0);
+    if (shm_wheat_ptr == (char *)-1) {
+        perror("shmat wheat failed");
+        exit(1);
+    }
+
+    // Yeast
+    shm_yeast_ptr = (char *)shmat(shm_yeast_id, NULL, 0);
+    if (shm_yeast_ptr == (char *)-1) {
+        perror("shmat yeast failed");
+        exit(1);
+    }
+
+    // Butter
+    shm_butter_ptr = (char *)shmat(shm_butter_id, NULL, 0);
+    if (shm_butter_ptr == (char *)-1) {
+        perror("shmat butter failed");
+        exit(1);
+    }
+
+    // Milk
+    shm_milk_ptr = (char *)shmat(shm_milk_id, NULL, 0);
+    if (shm_milk_ptr == (char *)-1) {
+        perror("shmat milk failed");
+        exit(1);
+    }
+
+    // Sugar
+    shm_sugar_ptr = (char *)shmat(shm_sugar_id, NULL, 0);
+    if (shm_sugar_ptr == (char *)-1) {
+        perror("shmat sugar failed");
+        exit(1);
+    }
+
+    // Salt
+    shm_salt_ptr = (char *)shmat(shm_salt_id, NULL, 0);
+    if (shm_salt_ptr == (char *)-1) {
+        perror("shmat salt failed");
+        exit(1);
+    }
+
+    // Sweet Items
+    shm_sweet_items_ptr = (char *)shmat(shm_sweet_items_id, NULL, 0);
+    if (shm_sweet_items_ptr == (char *)-1) {
+        perror("shmat sweet items failed");
+        exit(1);
+    }
+
+    // Cheese
+    shm_cheese_ptr = (char *)shmat(shm_cheese_id, NULL, 0);
+    if (shm_cheese_ptr == (char *)-1) {
+        perror("shmat cheese failed");
+        exit(1);
+    }
+
+    // Salami
+    shm_salami_ptr = (char *)shmat(shm_salami_id, NULL, 0);
+    if (shm_salami_ptr == (char *)-1) {
+        perror("shmat salami failed");
+        exit(1);
+    }
+
+    // Paste
+    shm_paste_ptr = (char *)shmat(shm_paste_id, NULL, 0);
+    if (shm_paste_ptr == (char *)-1) {
+        perror("shmat paste failed");
+        exit(1);
+    }
+
+    // Cake Paste
+    shm_cake_paste_ptr = (char *)shmat(shm_cake_paste_id, NULL, 0);
+    if (shm_cake_paste_ptr == (char *)-1) {
+        perror("shmat cake paste failed");
+        exit(1);
+    }
+
+    // Sandwiches
+    shm_sandwiches_ptr = (char *)shmat(shm_sandwiches_id, NULL, 0);
+    if (shm_sandwiches_ptr == (char *)-1) {
+        perror("shmat sandwiches failed");
+        exit(1);
+    }
+
+    // Sweets Paste
+    shm_sweets_paste_ptr = (char *)shmat(shm_sweets_paste_id, NULL, 0);
+    if (shm_sweets_paste_ptr == (char *)-1) {
+        perror("shmat sweets paste failed");
+        exit(1);
+    }
+
+    // Sweet Patisserie Paste
+    shm_sweet_patiss_paste_ptr = (char *)shmat(shm_sweet_patiss_paste_id, NULL, 0);
+    if (shm_sweet_patiss_paste_ptr == (char *)-1) {
+        perror("shmat sweet patisserie paste failed");
+        exit(1);
+    }
+
+    // Savory Patisserie Paste
+    shm_savory_patiss_paste_ptr = (char *)shmat(shm_savory_patiss_paste_id, NULL, 0);
+    if (shm_savory_patiss_paste_ptr == (char *)-1) {
+        perror("shmat savory patisserie paste failed");
+        exit(1);
+    }
+}
+
+void deattach_shm(int shmid, char *ptr) {
+    if (shmdt(ptr) == -1) {
+        perror("shmdt failed");
+    }
+}
+
+void deattach_all_shm() {
+    deattach_shm(shm_wheat_id, shm_wheat_ptr);
+    deattach_shm(shm_yeast_id, shm_yeast_ptr);
+    deattach_shm(shm_butter_id, shm_butter_ptr);
+    deattach_shm(shm_milk_id, shm_milk_ptr);
+    deattach_shm(shm_sugar_id, shm_sugar_ptr);
+    deattach_shm(shm_salt_id, shm_salt_ptr);
+    deattach_shm(shm_sweet_items_id, shm_sweet_items_ptr);
+    deattach_shm(shm_cheese_id, shm_cheese_ptr);
+    deattach_shm(shm_salami_id, shm_salami_ptr);
+    deattach_shm(shm_paste_id, shm_paste_ptr);
+    deattach_shm(shm_cake_paste_id, shm_cake_paste_ptr);
+    deattach_shm(shm_sandwiches_id, shm_sandwiches_ptr);
+    deattach_shm(shm_sweets_paste_id, shm_sweets_paste_ptr);
+    deattach_shm(shm_sweet_patiss_paste_id, shm_sweet_patiss_paste_ptr);
+    deattach_shm(shm_savory_patiss_paste_id, shm_savory_patiss_paste_ptr);
+}
+
+
+
+
 
 void init() {
     glClearColor(0.96f, 0.96f, 0.94f, 1.0f); // Very light gray background
