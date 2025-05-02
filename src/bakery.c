@@ -150,7 +150,7 @@ int sem_sweets_paste_id;
 int sem_sweet_patiss_paste_id;
 int sem_savory_patiss_paste_id;
 
-char *chef_production_message[6];
+char *chef_production_message[6];//pass
 /**/
 union semun
 {
@@ -164,7 +164,7 @@ union semun
 void create_shm_sem_basic_items();
 int create_shm(char proj_id, int size, char **ptr);
 int create_sem(char proj_id);
-char *basic_items_message = NULL;
+char *basic_items_message = NULL;//pass
 void write_shared_int(int sem_id, char *shm_ptr, int new_value);
 
 void initialize_shm_and_sem(int *shm_ids, int *sem_ids, char **shm_ptrs, int count, char base_key);
@@ -197,17 +197,18 @@ void cleanup_shm(int shmid, char *ptr);
 void cleanup_sem(int semid);
 void cleanup_shm_sem_basic_items();
 void cleanup_shm_sem_bakery(int shm_ids[], int sem_ids[], char *shm_ptrs[], int count);
+void fork_opengl_process();
 
 /*message basic items */
 void create_basic_items_message();
 void create_production_items_message();
 char *create_shm_sem_message(int *shm_ids, int *sem_ids, int count);
-char *bread_catagories_shm_sem_message;
-char *sandwiches_shm_sem_message;
-char *cake_flavors_shm_sem_message;
-char *sweets_flavors_shm_sem_message;
-char *sweet_patisseries_shm_sem_message;
-char *savory_patisseries_shm_sem_message;
+char *bread_catagories_shm_sem_message;//pass
+char *sandwiches_shm_sem_message;//pass
+char *cake_flavors_shm_sem_message;//pass
+char *sweets_flavors_shm_sem_message;//pass
+char *sweet_patisseries_shm_sem_message;//pass
+char *savory_patisseries_shm_sem_message;//pass
 
 /* Important for structure */
 int preparation_teams[6]; // in each cell have number of team members(ex: 2 paste preparation , 3 cake,... )
@@ -221,12 +222,6 @@ void fork_suppliers(pid_t suppliers_pids[]);
 // Maybe customers
 void fork_customers(pid_t customers_pids[], pid_t sallers_pids[]);
 
-
-
-
-
-
-
 /*Divide teams members ( Chefs and Bakers )*/
 void divde_prepartion_team_members(int chef_number);
 void divde_bakers_team_members(int baker_number);
@@ -238,6 +233,13 @@ void printConfig(const Config *cfg);
 /*Terniate game*/
 void kill_teams(pid_t chefs_pids[], pid_t baker_pids[], pid_t sallers_pids[], pid_t suppliers_pids[],pid_t customers_pids[]);
 void kill_process(pid_t pid);
+/*create function OpenGl to pass arg to file bakery_opengl */
+
+
+//fork for opengl process and  make process to excuti opengl file 
+//pass all shardM and sem IDs as massege to opengl file 
+// from opengl file parss ids 
+//from opengl attach shard Memory 
 
 int main(int argc, char **argv)
 {
@@ -335,6 +337,8 @@ int main(int argc, char **argv)
         //write_shared_int(sem_wheat_id, shm_wheat_ptr, 15);
         //fork_chefs(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids,savory_patiss_team_pids);
 	    fork_bakers( bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
+        fork_opengl_process();
+
 	    //fork_sallers(sallers_pids);
 	    //fork_suppliers(suppliers_pids);
         //fork_customers(customers_pids,sallers_pids);
@@ -1292,6 +1296,65 @@ void initialize_shm_and_sem(
     }
 }
 
+//********************************************************************************
+void fork_opengl_process() {
+    pid_t opengl_pid = fork();
+    
+    if (opengl_pid == 0) {
+        // Child process - execute OpenGL program
+        // Create a message containing all shared memory and semaphore IDs
+        //char opengl_args[MAX_BUFFER_SIZE * 10]; // Large enough buffer
+        
+        // Format: config_file|basic_items|chef_prod|bread|sandwiches|cake|sweets|sweet_patiss|savory_patiss
+        execlp("../bin/bakery_opengl", "bakery_opengl", config_file_name, NULL);
+        execlp("../bin/bakery_opengl", "bakery_opengl",basic_items_message , NULL);
+        execlp("../bin/bakery_opengl", "bakery_opengl",chef_production_message[0] , NULL);
+        execlp("../bin/bakery_opengl", "bakery_opengl",chef_production_message[1] , NULL);
+        execlp("../bin/bakery_opengl", "bakery_opengl",chef_production_message[2] , NULL);
+        execlp("../bin/bakery_opengl", "bakery_opengl",chef_production_message[3] , NULL);
+        execlp("../bin/bakery_opengl", "bakery_opengl",chef_production_message[4] , NULL);
+        execlp("../bin/bakery_opengl", "bakery_opengl",chef_production_message[5] , NULL);
+        execlp("../bin/bakery_opengl", "bakery_opengl",bread_catagories_shm_sem_message , NULL);
+        execlp("../bin/bakery_opengl", "bakery_opengl",sandwiches_shm_sem_message, NULL);
+        execlp("../bin/bakery_opengl", "bakery_opengl",cake_flavors_shm_sem_message , NULL);
+        execlp("../bin/bakery_opengl", "bakery_opengl",sweets_flavors_shm_sem_message , NULL);
+        execlp("../bin/bakery_opengl", "bakery_opengl",sweet_patisseries_shm_sem_message, NULL);
+        execlp("../bin/bakery_opengl", "bakery_opengl",savory_patisseries_shm_sem_message, NULL);
+        perror("execlp failed for bakery_opengl");
+        exit(EXIT_FAILURE);}
+        
+        else if (opengl_pid < 0) {
+            // Fork failed
+            perror("fork failed for OpenGL process");
+        }
+    
+        /*snprintf(opengl_args, sizeof(opengl_args),
+                "%s|%s|%s,%s,%s,%s,%s,%s|%s|%s|%s|%s|%s|%s",
+                config_file_name,
+                basic_items_message,
+                chef_production_message[0], chef_production_message[1], chef_production_message[2],
+                chef_production_message[3], chef_production_message[4], chef_production_message[5],
+                bread_catagories_shm_sem_message,
+                sandwiches_shm_sem_message,
+                cake_flavors_shm_sem_message,
+                sweets_flavors_shm_sem_message,
+                sweet_patisseries_shm_sem_message,
+                savory_patisseries_shm_sem_message);
+
+        // Execute OpenGL program with the combined message
+        execlp("../bin/bakery_opengl", "bakery_opengl", opengl_args, NULL);
+        
+        // If execlp fails
+        perror("execlp failed for bakery_opengl");
+        exit(EXIT_FAILURE);
+    }
+    else if (opengl_pid < 0) {
+        // Fork failed
+        perror("fork failed for OpenGL process");
+    }
+    // Parent continues execution
+    */
+}
 /*
 
    printf("\n#################################\n");
