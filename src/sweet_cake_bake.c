@@ -213,6 +213,7 @@ void deattach_all_shm() {
 int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
     static int read_count = 0; // Track number of readers inside this function
     printf("[DEBUG] File path:  paste \n");
+
     printf("[DEBUG] Starting modify_shared_int()...\n");
 
     // --- Start Reader-Writer synchronization (like your reader) ---
