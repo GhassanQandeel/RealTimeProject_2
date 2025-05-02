@@ -191,6 +191,25 @@ void printConfig(const Config *cfg);
 /*Terniate game*/
 void kill_teams(pid_t chefs_pids[], pid_t baker_pids[], pid_t sallers_pids[], pid_t suppliers_pids[],pid_t customers_pids[]);
 void kill_process(pid_t pid);
+
+void help_chefs_baased_on_quantity(  pid_t chefs_pids[], 
+    pid_t paste_team_pids[], 
+    pid_t cake_team_pids[], 
+    pid_t sandwishes_team_pids[], 
+    pid_t sweets_team_pids[], 
+    pid_t sweet_patiss_team_pids[], 
+    pid_t savory_patiss_team_pids[], int *sandwiches_sem_id, char **sandwiches_shm_ptr);
+void help_bakers_baased_on_quantity( pid_t bakers_pids[], 
+        pid_t sweet_cake_bake_team_pids[], 
+        pid_t sweet_savory_patiss_bake_team_pids[], 
+        pid_t bread_bake_team_pids[],
+        int bakers_teams[3],
+        int *bread_catagories_shm_id, int *bread_catagories_sem_id, char **bread_catagories_shm_ptr,
+        int *cake_flavors_shm_id, int *cake_flavors_sem_id, char **cake_flavors_shm_ptr,
+        int *sweets_flavors_shm_id, int *sweets_flavors_sem_id, char **sweets_flavors_shm_ptr,
+        int *sweet_patisseries_shm_id, int *sweet_patisseries_sem_id, char **sweet_patisseries_shm_ptr,
+        int *savory_patisseries_shm_id, int *savory_patisseries_sem_id, char **savory_patisseries_shm_ptr) ;    
+int read_from_shm(int sem_id, char *shm_ptr);
 /*create function OpenGl to pass arg to file bakery_opengl */
 
 
@@ -226,14 +245,15 @@ int main(int argc, char **argv)
     pid_t suppliers_pids[config.suppliers_number];
     pid_t customers_pids[config.max_number_of_customers];
         
-        
+	
+    // For Chefs
     pid_t paste_team_pids[config.chefs_number];
 	pid_t cake_team_pids[config.chefs_number];
 	pid_t sandwishes_team_pids[config.chefs_number];
 	pid_t sweets_team_pids[config.chefs_number];
 	pid_t sweet_patiss_team_pids[config.chefs_number];
 	pid_t savory_patiss_team_pids[config.chefs_number];
-
+    // For Bakers
     pid_t sweet_cake_bake_team_pids[config.bakers_number];
     pid_t sweet_savory_patiss_bake_team_pids[config.bakers_number];
     pid_t bread_bake_team_pids[config.bakers_number];
@@ -321,8 +341,20 @@ int main(int argc, char **argv)
          
    	
         sleep(40);
-        
-        
+        //Abbas, when go bulid main while loop let check every 20 sec after half config.max_time by timer if there chefs need help or bakers
+        //help_chefs_baased_on_quantity(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids
+        //,savory_patiss_team_pids,sandwiches_sem_id,sandwiches_shm_ptr);  
+        /*
+        help_bakers_baased_on_quantity(bakers_pids, 
+            sweet_cake_bake_team_pids, 
+            sweet_savory_patiss_bake_team_pids, 
+            bread_bake_team_pids,
+            bakers_teams,
+            bread_catagories_shm_id, bread_catagories_sem_id, bread_catagories_shm_ptr,
+            cake_flavors_shm_id, cake_flavors_sem_id, cake_flavors_shm_ptr,
+            sweets_flavors_shm_id, sweets_flavors_sem_id, sweets_flavors_shm_ptr,
+            sweet_patisseries_shm_id, sweet_patisseries_sem_id, sweet_patisseries_shm_ptr,
+            savory_patisseries_shm_id, savory_patisseries_sem_id, savory_patisseries_shm_ptr);*/
         cleanup_shm_sem_basic_items();
         cleanup_shm_sem_for_sale(bread_catagories_shm_id,bread_catagories_sem_id,bread_catagories_shm_ptr,
 	        sandwiches_shm_id,sandwiches_sem_id,sandwiches_shm_ptr,
@@ -1287,6 +1319,301 @@ void fork_opengl_process() {
         }
    
 }
+
+void help_chefs_baased_on_quantity(  pid_t chefs_pids[], 
+    pid_t paste_team_pids[], 
+    pid_t cake_team_pids[], 
+    pid_t sandwishes_team_pids[], 
+    pid_t sweets_team_pids[], 
+    pid_t sweet_patiss_team_pids[], 
+    pid_t savory_patiss_team_pids[],
+    int *sandwiches_sem_id, char **sandwiches_shm_ptr
+    ) {
+    // we will go to read the quantity of each chef production shm (paste ,cake paste ,sandwiches ,sweets paste ,sweet patiss paste ,savory patiss paste)
+    //then check if there any equal to zero or less after half of config.maxtime ,
+    //then we will help them by take chef from most quantity shm and kill it and make another process  for weak team
+    // Array to hold the quantities of each shared memory
+    int quantities[6];
+    quantities[0] = read_from_shm(sem_paste_id, shm_paste_ptr);
+    quantities[1] = read_from_shm(sem_cake_paste_id, shm_cake_paste_ptr);
+    quantities[2] = read_from_shm(sandwiches_sem_id[0], shm_sandwiches_ptr[0]);
+    quantities[3] = read_from_shm(sem_sweets_paste_id, shm_sweets_paste_ptr);
+    quantities[4] = read_from_shm(sem_sweet_patiss_paste_id, shm_sweet_patiss_paste_ptr);
+    quantities[5] = read_from_shm(sem_savory_patiss_paste_id, shm_savory_patiss_paste_ptr);
+
+    // Array to hold flags for each shared memory
+    int flags[6] = {0, 0, 0, 0, 0, 0};
+
+    // Check which shared memory has zero or less quantity and raise a flag
+    for (int i = 0; i < 6; i++) {
+        if (quantities[i] <= 0) {
+            flags[i] = 1; // Raise flag
+        }
+    }
+
+    // Find the shared memory with the maximum value
+    int max_index = -1;
+    int max_value = -1;
+    for (int i = 0; i < 6; i++) {
+        if (quantities[i] > max_value) {
+            max_value = quantities[i];
+            max_index = i;
+        }
+    }
+
+    // If a maximum value is found, lower its flag or decrement it
+    if (max_index != -1) {
+        flags[max_index] = -1; // Lower flag or mark as used
+    }
+    pid_t new_chef_pid;
+    // Iterate through flags to determine actions
+    for (int i = 0; i < 6; i++) {
+        if (flags[i] == 1) {
+            // Add a new chef to the team with low quantity
+            new_chef_pid = fork();
+            if (new_chef_pid == 0) {
+                // Child process: Execute the appropriate preparation process
+                if (i == 0) {
+                    execlp("../bin/paste_pre", "../bin/paste_pre",
+                           config_file_name,
+                           basic_items_message,
+                           chef_production_message[0], NULL);
+                } else if (i == 1) {
+                    execlp("../bin/cake_pre", "../bin/cake_pre",
+                           config_file_name,
+                           basic_items_message,
+                           chef_production_message[1], NULL);
+                } else if (i == 2) {
+                    execlp("../bin/sandwiches_pre", "../bin/sandwiches_pre",
+                           config_file_name,
+                           basic_items_message,
+                           bread_catagories_shm_sem_message,
+                           sandwiches_shm_sem_message, NULL);
+                } else if (i == 3) {
+                    execlp("../bin/sweets_pre", "../bin/sweets_pre",
+                           config_file_name,
+                           basic_items_message,
+                           chef_production_message[3], NULL);
+                } else if (i == 4) {
+                    execlp("../bin/sweet_patiss_pre", "../bin/sweet_patiss_pre",
+                           config_file_name,
+                           basic_items_message,
+                           chef_production_message[4],
+                           chef_production_message[0], NULL);
+                } else if (i == 5) {
+                    execlp("../bin/savory_patiss_pre", "../bin/savory_patiss_pre",
+                           config_file_name,
+                           basic_items_message,
+                           chef_production_message[5],
+                           chef_production_message[0], NULL);
+                }
+                perror("execlp failed for new chef");
+                exit(EXIT_FAILURE);
+            } else if (new_chef_pid > 0) {
+                // Parent process: Update the appropriate team array
+                if (i == 0) {
+                    paste_team_pids[preparation_teams[i]++] = new_chef_pid;
+                } else if (i == 1) {
+                    cake_team_pids[preparation_teams[i]++] = new_chef_pid;
+                } else if (i == 2) {
+                    sandwishes_team_pids[preparation_teams[i]++] = new_chef_pid;
+                } else if (i == 3) {
+                    sweets_team_pids[preparation_teams[i]++] = new_chef_pid;
+                } else if (i == 4) {
+                    sweet_patiss_team_pids[preparation_teams[i]++] = new_chef_pid;
+                } else if (i == 5) {
+                    savory_patiss_team_pids[preparation_teams[i]++] = new_chef_pid;
+                }
+                
+            } else {
+                perror("fork failed for new chef");
+            }
+        } else if (flags[i] == -1) {
+            // Kill a chef from the team with high quantity
+            pid_t pid_to_kill;
+            if (i == 0) {
+                pid_to_kill = paste_team_pids[--preparation_teams[i]];
+            } else if (i == 1) {
+                pid_to_kill = cake_team_pids[--preparation_teams[i]];
+            } else if (i == 2) {
+                pid_to_kill = sandwishes_team_pids[--preparation_teams[i]];
+            } else if (i == 3) {
+                pid_to_kill = sweets_team_pids[--preparation_teams[i]];
+            } else if (i == 4) {
+                pid_to_kill = sweet_patiss_team_pids[--preparation_teams[i]];
+            } else if (i == 5) {
+                pid_to_kill = savory_patiss_team_pids[--preparation_teams[i]];
+            }
+            kill_process(pid_to_kill);
+
+            
+            for (int j = 0; j < config.chefs_number; j++) {
+                if (chefs_pids[j] == pid_to_kill) {
+                    chefs_pids[j] = new_chef_pid; 
+                    break;
+                }
+            }
+        }
+    }
+
+}
+
+void help_bakers_baased_on_quantity( pid_t bakers_pids[], 
+    pid_t sweet_cake_bake_team_pids[], 
+    pid_t sweet_savory_patiss_bake_team_pids[], 
+    pid_t bread_bake_team_pids[],
+    int bakers_teams[3],
+    int *bread_catagories_shm_id, int *bread_catagories_sem_id, char **bread_catagories_shm_ptr,
+    int *cake_flavors_shm_id, int *cake_flavors_sem_id, char **cake_flavors_shm_ptr,
+    int *sweets_flavors_shm_id, int *sweets_flavors_sem_id, char **sweets_flavors_shm_ptr,
+    int *sweet_patisseries_shm_id, int *sweet_patisseries_sem_id, char **sweet_patisseries_shm_ptr,
+    int *savory_patisseries_shm_id, int *savory_patisseries_sem_id, char **savory_patisseries_shm_ptr) 
+{
+    // Array to hold the quantities of each shared memory
+    int quantities[3];
+    quantities[0] = read_from_shm(bread_catagories_sem_id[0], bread_catagories_shm_ptr[0]); // Bread
+    quantities[1] = read_from_shm(cake_flavors_sem_id[0], cake_flavors_shm_ptr[0]);         // Cake
+    quantities[2] = read_from_shm(sweets_flavors_sem_id[0], sweets_flavors_shm_ptr[0]);     // Sweets
+
+    // Array to hold flags for each shared memory
+    int flags[3] = {0, 0, 0};
+
+    // Check which shared memory has zero or less quantity and raise a flag
+    for (int i = 0; i < 3; i++) {
+        if (quantities[i] <= 0) {
+            flags[i] = 1; // Raise flag
+        }
+    }
+
+    // Find the shared memory with the maximum value
+    int max_index = -1;
+    int max_value = -1;
+    for (int i = 0; i < 3; i++) {
+        if (quantities[i] > max_value) {
+            max_value = quantities[i];
+            max_index = i;
+        }
+    }
+
+    // If a maximum value is found, lower its flag or decrement it
+    if (max_index != -1) {
+        flags[max_index] = -1; // Lower flag or mark as used
+    }
+
+    pid_t new_baker_pid;
+
+    // Iterate through flags to determine actions
+    for (int i = 0; i < 3; i++) {
+        if (flags[i] == 1) {
+            // Add a new baker to the team with low quantity
+            new_baker_pid = fork();
+            if (new_baker_pid == 0) {
+                // Child process: Execute the appropriate baking process
+                if (i == 0) {
+                    execlp("../bin/bread_bake", "../bin/bread_bake",
+                           config_file_name,
+                           chef_production_message[0],
+                           bread_catagories_shm_sem_message, NULL);
+                } else if (i == 1) {
+                    execlp("../bin/sweet_cake_bake", "../bin/sweet_cake_bake",
+                           config_file_name,
+                           chef_production_message[1],
+                           chef_production_message[3],
+                           cake_flavors_shm_sem_message,
+                           sweets_flavors_shm_sem_message, NULL);
+                } else if (i == 2) {
+                    execlp("../bin/sweet_savory_patiss_bake", "../bin/sweet_savory_patiss_bake",
+                           config_file_name,
+                           chef_production_message[4],
+                           chef_production_message[5],
+                           sweet_patisseries_shm_sem_message,
+                           savory_patisseries_shm_sem_message, NULL);
+                }
+                perror("execlp failed for new baker");
+                exit(EXIT_FAILURE);
+            } else if (new_baker_pid > 0) {
+                // Parent process: Update the appropriate team array
+                if (i == 0) {
+                    bread_bake_team_pids[bakers_teams[i]++] = new_baker_pid;
+                } else if (i == 1) {
+                    sweet_cake_bake_team_pids[bakers_teams[i]++] = new_baker_pid;
+                } else if (i == 2) {
+                    sweet_savory_patiss_bake_team_pids[bakers_teams[i]++] = new_baker_pid;
+                }
+            } else {
+                perror("fork failed for new baker");
+            }
+        } else if (flags[i] == -1) {
+            // Kill a baker from the team with high quantity
+            pid_t pid_to_kill;
+            if (i == 0) {
+                pid_to_kill = bread_bake_team_pids[--bakers_teams[i]];
+            } else if (i == 1) {
+                pid_to_kill = sweet_cake_bake_team_pids[--bakers_teams[i]];
+            } else if (i == 2) {
+                pid_to_kill = sweet_savory_patiss_bake_team_pids[--bakers_teams[i]];
+            }
+            kill_process(pid_to_kill);
+
+            // Update bakers_pids array
+            for (int j = 0; j < config.bakers_number; j++) {
+                if (bakers_pids[j] == pid_to_kill) {
+                    bakers_pids[j] = new_baker_pid;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+
+
+
+int read_from_shm(int sem_id, char *shm_ptr) {
+    static int read_count = 0; // Track number of readers inside this function
+    printf("[DEBUG] File path: parent bakery \n");
+    printf("[DEBUG] Starting read_from_shm()...\n");
+
+    // --- Start Reader-Writer synchronization (like your reader) ---
+
+    // Acquire mutex to protect read_count
+    struct sembuf op_wait_mutex = {MUTEX, -1, SEM_UNDO};
+    semop(sem_id, &op_wait_mutex, 1);
+
+    read_count++;
+
+    if (read_count == 1) {
+        // First reader locks write lock
+        struct sembuf op_wait_write_lock = {WRITE_LOCK, -1, SEM_UNDO};
+        semop(sem_id, &op_wait_write_lock, 1);
+    }
+
+    // Release mutex
+    struct sembuf op_release_mutex = {MUTEX, 1, SEM_UNDO};
+    semop(sem_id, &op_release_mutex, 1);
+
+    // --- Critical Section: Reading value ---
+    int value = *((int *)shm_ptr);  // Read int from shared memory
+    printf("[DEBUG] Read value from shared memory: %d\n", value);
+    // --- End Reading ---
+
+    // Acquire mutex again to safely modify read_count
+    semop(sem_id, &op_wait_mutex, 1);
+
+    read_count--;
+
+    if (read_count == 0) {
+        // Last reader releases write lock
+        struct sembuf op_release_write_lock = {WRITE_LOCK, 1, SEM_UNDO};
+        semop(sem_id, &op_release_write_lock, 1);
+    }
+
+    semop(sem_id, &op_release_mutex, 1);
+
+    printf("[DEBUG] Finished read_from_shm()\n\n");
+    return value;
+}
+
 /*
 
    printf("\n#################################\n");
