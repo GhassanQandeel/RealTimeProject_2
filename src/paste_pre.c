@@ -22,7 +22,7 @@ void parse_ids(const char *buffer);
 void attach_shm_basic_items();
 void deattach_shm(int shmid, char *ptr);
 void deattach_all_shm();
-void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add);
+int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add);
 void do_work();
 
 
@@ -85,9 +85,10 @@ int main(int argc, char **argv) {
     parse_ids(argv[2]);
     sscanf(argv[3], "%d %d", &shm_paste_id, &sem_paste_id);
     attach_shm_basic_items();
-    
-    
-    Modify_shared_int(sem_wheat_id,shm_wheat_ptr, 3);
+    sleep(10);
+    while(1){
+    do_work();
+    }
     /*Do your code */
     
     deattach_all_shm();
@@ -171,59 +172,54 @@ void deattach_all_shm() {
     deattach_shm(shm_paste_id, shm_paste_ptr);  
 }
 
-void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
+int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
     static int read_count = 0; // Track number of readers inside this function
-    printf("[DEBUG] File path: paste \n");
+    printf("[DEBUG] File path:  paste \n");
     printf("[DEBUG] Starting modify_shared_int()...\n");
 
     // --- Start Reader-Writer synchronization (like your reader) ---
 
     // Acquire mutex to protect read_count
     struct sembuf op_wait_mutex = {MUTEX, -1, SEM_UNDO};
-    printf("[DEBUG] Locking MUTEX to protect read_count\n");
     semop(sem_id, &op_wait_mutex, 1);
 
     read_count++;
-    printf("[DEBUG] Incremented read_count: %d\n", read_count);
+    
     if (read_count == 1) {
         // First reader locks write lock
         struct sembuf op_wait_write_lock = {WRITE_LOCK, -1, SEM_UNDO};
-        printf("[DEBUG] First reader locking WRITE_LOCK\n");
+        
         semop(sem_id, &op_wait_write_lock, 1);
     }
 
     // Release mutex
     struct sembuf op_release_mutex = {MUTEX, 1, SEM_UNDO};
-    printf("[DEBUG] Releasing MUTEX\n");
+    
     semop(sem_id, &op_release_mutex, 1);
 
     // --- Critical Section: Reading value ---
     int current_value = *((int *)shm_ptr);  // Read int from shared memory
     printf("[DEBUG] Read value from shared memory: %d\n", current_value);
-
     // --- End Reading ---
 
     // Acquire mutex again to safely modify read_count
-    printf("[DEBUG] Locking MUTEX again to modify read_count\n");
+    
     semop(sem_id, &op_wait_mutex, 1);
 
     read_count--;
-    printf("[DEBUG] Decremented read_count: %d\n", read_count);
+    
     if (read_count == 0) {
         // Last reader releases write lock
         struct sembuf op_release_write_lock = {WRITE_LOCK, 1, SEM_UNDO};
-        printf("[DEBUG] Last reader releasing WRITE_LOCK\n");
         semop(sem_id, &op_release_write_lock, 1);
     }
 
-    printf("[DEBUG] Releasing MUTEX after modifying read_count\n");
     semop(sem_id, &op_release_mutex, 1);
 
     // --- Now become a Writer to modify shared memory ---
 
     // Acquire write lock
     struct sembuf op_wait_write_lock2 = {WRITE_LOCK, -1, SEM_UNDO};
-    printf("[DEBUG] Locking WRITE_LOCK for writing\n");
     semop(sem_id, &op_wait_write_lock2, 1);
 
     // Modify value
@@ -233,10 +229,10 @@ void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
 
     // Release write lock
     struct sembuf op_release_write_lock2 = {WRITE_LOCK, 1, SEM_UNDO};
-    printf("[DEBUG] Releasing WRITE_LOCK after writing\n");
     semop(sem_id, &op_release_write_lock2, 1);
-
     printf("[DEBUG] Finished modify_shared_int()\n\n");
+    return current_value;
+
 }
 
 void do_work() {
@@ -246,17 +242,35 @@ void do_work() {
     //random amount to take (between 1-3 units)
     int amount = (rand() % 3) + 1;
     
-    // Take from the ingredient (decrease)
-    Modify_shared_int(sem_wheat_id , shm_wheat_ptr ,-amount);
-    Modify_shared_int(sem_yeast_id , shm_yeast_ptr ,-amount);
-    Modify_shared_int(sem_butter_id , shm_butter_ptr ,-amount);
-    Modify_shared_int(sem_milk_id , shm_milk_ptr ,-amount);
-    Modify_shared_int(sem_salt_id , shm_salt_ptr ,-amount);
     
+    if (modify_shared_int(sem_wheat_id, shm_wheat_ptr, -amount) <= 0) {
+        sleep(200);
+    }
     
+    // Yeast check
+    if (modify_shared_int(sem_yeast_id, shm_yeast_ptr, -amount) <= 0) {
+        sleep(200);
+    }
+    
+    // Butter check
+    if (modify_shared_int(sem_butter_id, shm_butter_ptr, -amount) <= 0) {
+        sleep(200);
+    }
+    
+    // Milk check
+    if (modify_shared_int(sem_milk_id, shm_milk_ptr, -amount) <= 0) {
+        sleep(200);
+    }
+    
+    // Salt check
+    if (modify_shared_int(sem_salt_id, shm_salt_ptr, -amount) <= 0) {
+        sleep(200);
+    }
+
+
     // Simulate processing time
     sleep(processing_time);
     
     // Add to paste (increase)
-    Modify_shared_int(sem_paste_id, shm_paste_ptr, amount*2);
+    int paste_int=modify_shared_int(sem_paste_id, shm_paste_ptr, amount*2);
     }

@@ -312,7 +312,7 @@ int main(int argc, char **argv)
 
     divde_prepartion_team_members(config.chefs_number);
     divde_bakers_team_members(config.bakers_number);
-
+    
     initialize_all_shm_and_sem_for_sale(
         bread_catagories_shm_id, bread_catagories_sem_id, bread_catagories_shm_ptr,
         sandwiches_shm_id, sandwiches_sem_id, sandwiches_shm_ptr,
@@ -340,7 +340,7 @@ int main(int argc, char **argv)
         fork_opengl_process();
 
 	    //fork_sallers(sallers_pids);
-	    //fork_suppliers(suppliers_pids);
+	    fork_suppliers(suppliers_pids);
         //fork_customers(customers_pids,sallers_pids);
        
        
@@ -362,7 +362,7 @@ int main(int argc, char **argv)
 
          
    	
-        sleep(10);
+        sleep(40);
         
         
         cleanup_shm_sem_basic_items();
@@ -431,7 +431,7 @@ void fork_chefs(pid_t chefs_pids[],pid_t paste_team_pids[],pid_t cake_team_pids[
 
             if (counter == 0)
             {
-                execlp("bin/paste_pre", "bin/paste_pre",
+                execlp("../bin/paste_pre", "../bin/paste_pre",
                     config_file_name,
                     basic_items_message,
                     chef_production_message[0], NULL);
@@ -440,14 +440,14 @@ void fork_chefs(pid_t chefs_pids[],pid_t paste_team_pids[],pid_t cake_team_pids[
             }
             if (counter == 1)
             {
-                execlp("bin/cake_pre", "bin/cake_pre", config_file_name, basic_items_message, chef_production_message[1], NULL);
+                execlp("../bin/cake_pre", "../bin/cake_pre", config_file_name, basic_items_message, chef_production_message[1], NULL);
                 perror("execlp failed for cake");
                 exit(EXIT_FAILURE);
             }
             if (counter == 2)
             {
-                execlp("bin/sandwiches_pre",
-                       "bin/sandwiches_pre",
+                execlp("../bin/sandwiches_pre",
+                       "../bin/sandwiches_pre",
                        config_file_name,
                        basic_items_message,
                        bread_catagories_shm_sem_message,
@@ -457,14 +457,14 @@ void fork_chefs(pid_t chefs_pids[],pid_t paste_team_pids[],pid_t cake_team_pids[
             }
             if (counter == 3)
             {
-                execlp("bin/sweets_pre", "bin/sweets_pre", config_file_name, basic_items_message, chef_production_message[3], NULL);
+                execlp("../bin/sweets_pre", "../bin/sweets_pre", config_file_name, basic_items_message, chef_production_message[3], NULL);
                 perror("execlp failed for sweets");
                 exit(EXIT_FAILURE);
             }
             if (counter == 4)
             {
-                execlp("bin/sweet_patiss_pre",
-                    "bin/sweet_patiss_pre",
+                execlp("../bin/sweet_patiss_pre",
+                    "../bin/sweet_patiss_pre",
                     config_file_name,
                     basic_items_message,
                     chef_production_message[4],
@@ -474,8 +474,8 @@ void fork_chefs(pid_t chefs_pids[],pid_t paste_team_pids[],pid_t cake_team_pids[
             }
             if (counter == 5)
             {
-                execlp("bin/savory_patiss_pre",
-                    "bin/savory_patiss_pre",
+                execlp("../bin/savory_patiss_pre",
+                    "../bin/savory_patiss_pre",
                     config_file_name,
                     basic_items_message, 
                     chef_production_message[5],
@@ -646,7 +646,7 @@ void fork_suppliers(pid_t suppliers_pids[])
         if ((suppliers_pids[i] = fork()) == 0)
         {
             // In the child process (supplier)
-            execlp("bin/supplier", "bin/supplier", config_file_name, basic_items_message, NULL);
+            execlp("../bin/supplier", "../bin/supplier", config_file_name, basic_items_message, NULL);
             perror("execlp failed for supplier");
             exit(EXIT_FAILURE);
         }
@@ -693,12 +693,14 @@ void kill_process(pid_t pid)
 // Function to clean up by killing all processes
 void kill_teams(pid_t chefs_pids[] , pid_t baker_pids[], pid_t sallers_pids[], pid_t suppliers_pids[], pid_t customers_pids[]) {
     // Kill chefs processes
-/*
+
     for (int i = 0; i < config.chefs_number; i++)
     {
         kill_process(chefs_pids[i]);
     }
-*/
+
+    /*
+    
     
     // Kill bakers processes
     for (int i = 0; i < config.bakers_number; i++) {
@@ -709,11 +711,11 @@ void kill_teams(pid_t chefs_pids[] , pid_t baker_pids[], pid_t sallers_pids[], p
     for (int i = 0; i < config.sallers_number; i++) {
         kill_process(sallers_pids[i]);
     }
-
+     */
     // Kill suppliers processes
     for (int i = 0; i < config.suppliers_number; i++) {
         kill_process(suppliers_pids[i]);
-    }*/
+    }
 }
 
 void divde_prepartion_team_members(int chef_number)

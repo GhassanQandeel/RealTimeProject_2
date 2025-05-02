@@ -19,7 +19,9 @@ void attach_shm_basic_items();
 void deattach_shm(int shmid, char *ptr);
 void deattach_all_shm();
 
-void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add);
+int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add);
+void do_work(int* bread_catagories_sem_id , char** bread_catagories_shm_ptr,int* sandwiches_sem_id,char** sandwiches_shm_ptr );
+
 void decode_shm_sem_message(const char* message, int* shm_ids, int* sem_ids, int max_count);
 void attach_shm_segments(int* shm_ids, char** shm_ptrs, int count);
 void detach_shm_segments(char** shm_ptrs, int count);
@@ -113,8 +115,8 @@ int main(int argc, char **argv) {
 	
     	parse_ids(argv[2]);
     	
-  	decode_shm_sem_message(argv[3], bread_catagories_shm_id, bread_catagories_sem_id, config.bread_catagories_number);
-  	decode_shm_sem_message(argv[4], sandwiches_shm_id, sandwiches_sem_id, config.sandwiches_number);
+  	    decode_shm_sem_message(argv[3], bread_catagories_shm_id, bread_catagories_sem_id, config.bread_catagories_number);
+  	    decode_shm_sem_message(argv[4], sandwiches_shm_id, sandwiches_sem_id, config.sandwiches_number);
   	
     	attach_shm_basic_items();
     	attach_shm_segments(bread_catagories_shm_id,bread_catagories_shm_ptr, config.bread_catagories_number);
@@ -182,55 +184,6 @@ void parse_ids(const char *buffer) {
 }
 
 void attach_shm_basic_items() {
-    // Wheat
-    shm_wheat_ptr = (char *)shmat(shm_wheat_id, NULL, 0);
-    if (shm_wheat_ptr == (char *)-1) {
-        perror("shmat wheat failed");
-        exit(1);
-    }
-
-    // Yeast
-    shm_yeast_ptr = (char *)shmat(shm_yeast_id, NULL, 0);
-    if (shm_yeast_ptr == (char *)-1) {
-        perror("shmat yeast failed");
-        exit(1);
-    }
-
-    // Butter
-    shm_butter_ptr = (char *)shmat(shm_butter_id, NULL, 0);
-    if (shm_butter_ptr == (char *)-1) {
-        perror("shmat butter failed");
-        exit(1);
-    }
-
-    // Milk
-    shm_milk_ptr = (char *)shmat(shm_milk_id, NULL, 0);
-    if (shm_milk_ptr == (char *)-1) {
-        perror("shmat milk failed");
-        exit(1);
-    }
-
-    // Sugar
-    shm_sugar_ptr = (char *)shmat(shm_sugar_id, NULL, 0);
-    if (shm_sugar_ptr == (char *)-1) {
-        perror("shmat sugar failed");
-        exit(1);
-    }
-
-    // Salt
-    shm_salt_ptr = (char *)shmat(shm_salt_id, NULL, 0);
-    if (shm_salt_ptr == (char *)-1) {
-        perror("shmat salt failed");
-        exit(1);
-    }
-
-    // Sweet Items
-    shm_sweet_items_ptr = (char *)shmat(shm_sweet_items_id, NULL, 0);
-    if (shm_sweet_items_ptr == (char *)-1) {
-        perror("shmat sweet items failed");
-        exit(1);
-    }
-
     // Cheese
     shm_cheese_ptr = (char *)shmat(shm_cheese_id, NULL, 0);
     if (shm_cheese_ptr == (char *)-1) {
@@ -284,72 +237,60 @@ void deattach_shm(int shmid, char *ptr) {
    
 }
 void deattach_all_shm() {
-    deattach_shm(shm_wheat_id, shm_wheat_ptr);
-    deattach_shm(shm_yeast_id, shm_yeast_ptr);
-    deattach_shm(shm_butter_id, shm_butter_ptr);
-    deattach_shm(shm_milk_id, shm_milk_ptr);
-    deattach_shm(shm_sugar_id, shm_sugar_ptr);
-    deattach_shm(shm_salt_id, shm_salt_ptr);
-    deattach_shm(shm_sweet_items_id, shm_sweet_items_ptr);
+
     deattach_shm(shm_cheese_id, shm_cheese_ptr);
     deattach_shm(shm_salami_id, shm_salami_ptr);
     
     
 }
-void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
+int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
     static int read_count = 0; // Track number of readers inside this function
-
-    printf("[DEBUG] File path: sandwiches \n");
+    printf("[DEBUG] File path:  paste \n");
     printf("[DEBUG] Starting modify_shared_int()...\n");
 
     // --- Start Reader-Writer synchronization (like your reader) ---
 
     // Acquire mutex to protect read_count
     struct sembuf op_wait_mutex = {MUTEX, -1, SEM_UNDO};
-    printf("[DEBUG] Locking MUTEX to protect read_count\n");
     semop(sem_id, &op_wait_mutex, 1);
 
     read_count++;
-    printf("[DEBUG] Incremented read_count: %d\n", read_count);
+    
     if (read_count == 1) {
         // First reader locks write lock
         struct sembuf op_wait_write_lock = {WRITE_LOCK, -1, SEM_UNDO};
-        printf("[DEBUG] First reader locking WRITE_LOCK\n");
+        
         semop(sem_id, &op_wait_write_lock, 1);
     }
 
     // Release mutex
     struct sembuf op_release_mutex = {MUTEX, 1, SEM_UNDO};
-    printf("[DEBUG] Releasing MUTEX\n");
+    
     semop(sem_id, &op_release_mutex, 1);
 
     // --- Critical Section: Reading value ---
     int current_value = *((int *)shm_ptr);  // Read int from shared memory
     printf("[DEBUG] Read value from shared memory: %d\n", current_value);
-
     // --- End Reading ---
 
     // Acquire mutex again to safely modify read_count
-    printf("[DEBUG] Locking MUTEX again to modify read_count\n");
+    
     semop(sem_id, &op_wait_mutex, 1);
 
     read_count--;
-    printf("[DEBUG] Decremented read_count: %d\n", read_count);
+    
     if (read_count == 0) {
         // Last reader releases write lock
         struct sembuf op_release_write_lock = {WRITE_LOCK, 1, SEM_UNDO};
-        printf("[DEBUG] Last reader releasing WRITE_LOCK\n");
         semop(sem_id, &op_release_write_lock, 1);
     }
 
-    printf("[DEBUG] Releasing MUTEX after modifying read_count\n");
     semop(sem_id, &op_release_mutex, 1);
 
     // --- Now become a Writer to modify shared memory ---
 
     // Acquire write lock
     struct sembuf op_wait_write_lock2 = {WRITE_LOCK, -1, SEM_UNDO};
-    printf("[DEBUG] Locking WRITE_LOCK for writing\n");
     semop(sem_id, &op_wait_write_lock2, 1);
 
     // Modify value
@@ -359,9 +300,41 @@ void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
 
     // Release write lock
     struct sembuf op_release_write_lock2 = {WRITE_LOCK, 1, SEM_UNDO};
-    printf("[DEBUG] Releasing WRITE_LOCK after writing\n");
     semop(sem_id, &op_release_write_lock2, 1);
-
     printf("[DEBUG] Finished modify_shared_int()\n\n");
+    return current_value;
+
 }
 
+void do_work(int* bread_catagories_sem_id , char** bread_catagories_shm_ptr,int* sandwiches_sem_id,char** sandwiches_shm_ptr ) {
+    //random time to  achive the code 
+    int processing_time = (rand() % 6) + 1;
+    
+    //random amount to take (between 1-3 units)
+    int amount = (rand() % 3) + 1;
+    
+    
+    if (modify_shared_int(sem_cheese_id, shm_cheese_ptr, -amount) <= 0) {
+        sleep(200);
+    }
+    
+    // Yeast check
+    if (modify_shared_int(sem_salami_id, shm_salami_ptr, -amount) <= 0) {
+        sleep(200);
+    }
+    for (int i = 0; i < config.bread_catagories_number; i++)
+    {
+        if (modify_shared_int(bread_catagories_sem_id[i], bread_catagories_shm_ptr[i], -amount) <= 0) {
+            sleep(200);
+        }
+        
+    }
+    
+
+    // Simulate processing time
+    sleep(processing_time);
+    for (int i = 0; i < config.sandwiches_number; i++)
+    {
+        int paste_int=modify_shared_int(sandwiches_sem_id[i], sandwiches_shm_ptr[i], amount*2);
+    }
+    }

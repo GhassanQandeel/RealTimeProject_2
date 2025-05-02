@@ -10,7 +10,7 @@ savory_patisseries_number=1
 
 
 chefs_number=6
-bakers_number=6
+bakers_number=3
 sallers_number=3
 suppliers_number=2
 customer_number=4;
