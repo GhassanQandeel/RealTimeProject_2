@@ -385,12 +385,6 @@ void drawStaffMember(float x, float y, int type, int busy) {
     }
 }
 
-// [Rest of the functions (drawCustomer, drawProduct, update, addCustomer, 
-// addProduct, updateCustomer, updateProducts, updateStaff, drawResources, 
-// drawStatus, drawText) remain similar to previous versions but adjusted 
-// for the new layout]
-
-
 
 
 void update(int value) {
