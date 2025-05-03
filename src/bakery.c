@@ -23,19 +23,19 @@
 #include <semaphore.h>       
 #include <unistd.h>
 #include <string.h>
+#include "../include/local.h"
 
 
 #define SHM_SIZE 1024
 #define MSG_SIZE 1024
-
-
+#define MAX_BUFFER_SIZE 1024
 #define PREPARATION_TEAM_COUNT 6
 #define BAKERS_TEAM_COUNT 3
 
-
-
-/*basic Items message buffer */
-#define MAX_BUFFER_SIZE 1024
+// Message Queue related info
+int mid;
+MESSAGE msg_rcv;
+MESSAGE requested_missing_items;
 
 
 
@@ -75,6 +75,10 @@ int sem_salt_id;
 int sem_sweet_items_id;
 int sem_cheese_id;
 int sem_salami_id;
+
+int number_of_frustrated_customers;
+int nummber_of_complained_customers;
+int number_of_missing_items_customers;
 
 
 union semun {
@@ -175,16 +179,28 @@ int main(int argc, char **argv) {
 	
 	if (load_config(config_file_name, &config) == 0) {
 	    //printConfig(&config);
-	    printf("Success to load configuration.\n");
+	   // printf("Success to load configuration.\n");
 	} else {
 	    fprintf(stderr, "Failed to load configuration.\n");
 	}
-	
+
+    key_t key;
+    if ((key = ftok(".", SEED)) == -1) {    
+    perror("Key generation");
+    printf("Error number: %d\n", errno);
+    return 1;
+    }
+
+    mid = msgget(key, IPC_CREAT | 0660);
+	if (mid == -1){
+        perror("msgget");
+        exit(1);
+    }
 	
 
-	    pid_t chefs_pids[config.chefs_number];
-	    pid_t bakers_pids[config.bakers_number];
-        pid_t sallers_pids[config.sallers_number];
+	pid_t chefs_pids[config.chefs_number];
+	pid_t bakers_pids[config.bakers_number];
+    pid_t sallers_pids[config.sallers_number];
         pid_t suppliers_pids[config.suppliers_number];
         pid_t customers_pids[config.customer_number];
         
@@ -209,6 +225,31 @@ int main(int argc, char **argv) {
         //printf("From parent Combined IDs: %s\n", basic_items_message);
         fork_chefs(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids,savory_patiss_team_pids);
         fork_customers(customers_pids,sallers_pids);
+        fork_sallers(sallers_pids, customers_pids);
+
+        while (1) {
+            if (msgrcv(mid, &msg_rcv, sizeof(msg_rcv.buffer), 2, 0) == -1) { // -1 is the equivalent to requsting an item
+            perror("msgrcv");
+            continue;
+            }
+            printf("----------------------------------------------------------------------------------\n");
+            printf("Customer%d is %s, bakery noted\n",msg_rcv.msg_fm, msg_rcv.buffer); // Print the received message
+            if (strcmp(msg_rcv.buffer, "Frustrated") == 0) {
+                number_of_frustrated_customers++;
+            } else if (strcmp(msg_rcv.buffer, "Complained") == 0) {
+                nummber_of_complained_customers++;
+            } else if (strcmp(msg_rcv.buffer, "Requested Missing Items") == 0) {
+                number_of_missing_items_customers++;
+            }
+            // Print the number of customers
+            printf("Number of frustrated customers: %d\n", number_of_frustrated_customers);
+            printf("Number of complained customers: %d\n", nummber_of_complained_customers);
+            printf("Number of customers requested missing items: %d\n", number_of_missing_items_customers);
+        }
+
+        
+
+
         
 	//fork_bakers( bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
 	//fork_sallers(sallers_pids);
@@ -432,9 +473,16 @@ void fork_bakers(pid_t bakers_pids[], pid_t sweet_cake_bake_team_pids[], pid_t s
 void fork_sallers(pid_t sallers_pids[], pid_t customers_pids[]) {
      // Fork processes for sallers
     for (int i = 0; i < config.sallers_number; i++) {
+       
         if ((sallers_pids[i] = fork()) == 0) {
             // In the child process (saller)
-            execlp("../bin/saller", "../bin/saller", config_file_name, NULL);
+
+            char seller_id_str[10];
+            snprintf(seller_id_str, sizeof(seller_id_str), "%d", i);  // Convert PID to string
+            // format mid to string
+            char mid_str[10];
+            snprintf(mid_str, sizeof(mid_str), "%d", mid);  // Convert PID to string
+            execlp("bin/saller", "bin/saller", config_file_name, seller_id_str, mid_str, NULL);
             perror("execlp failed for saller");
             exit(EXIT_FAILURE);
         }
@@ -464,8 +512,10 @@ void fork_customers(pid_t customers_pids[], pid_t sallers_pids[]){
             char time_str[20];
             snprintf(time_str, sizeof(time_str), "%ld", creation_time);  // Convert to string
             // In the child process (customer)
+            char mid_str[10];
+            snprintf(mid_str, sizeof(mid_str), "%d", mid);  // Convert PID to string
             // ../bin/customer
-            execlp("bin/customer", "bin/customer", config_file_name, customer_pid_str, time_str, NULL);
+            execlp("bin/customer", "bin/customer", config_file_name, customer_pid_str, time_str, mid_str, NULL);
             perror("execlp failed for customer");
             exit(EXIT_FAILURE);
         }

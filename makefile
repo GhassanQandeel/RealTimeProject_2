@@ -9,10 +9,12 @@ BIN_DIR = bin
 
 # Source files
 CUSTOMER_SRC = $(SRC_DIR)/customer.c $(SRC_DIR)/config.c
+SALLER_SRC = $(SRC_DIR)/saller.c $(SRC_DIR)/config.c
 BAKERY_SRC = $(SRC_DIR)/bakery.c $(SRC_DIR)/config.c
 
 # Executables
 CUSTOMER_EXE = $(BIN_DIR)/customer
+SALLER_EXE = $(BIN_DIR)/saller
 BAKERY_EXE = $(BIN_DIR)/bakery
 
 # Config file
@@ -23,10 +25,13 @@ $(shell mkdir -p $(BIN_DIR))
 
 .PHONY: all clean run
 
-all: $(CUSTOMER_EXE) $(BAKERY_EXE)
+all: $(CUSTOMER_EXE) $(SALLER_EXE) $(BAKERY_EXE)
 
 $(CUSTOMER_EXE): $(CUSTOMER_SRC)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+$(SALLER_EXE): $(SALLER_SRC)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)	
 
 $(BAKERY_EXE): $(BAKERY_SRC)
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)

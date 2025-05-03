@@ -13,7 +13,7 @@ chefs_number=8
 bakers_number=6
 sallers_number=3
 suppliers_number=2
-customer_number=4;
+customer_number=8;
 
 # Ingredient Maximum Quantities (in kilograms or liters)
 wheat_amount_max=100
