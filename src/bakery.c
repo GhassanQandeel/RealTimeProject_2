@@ -28,33 +28,18 @@
 #include <semaphore.h>       
 #include <unistd.h>
 #include <string.h>
-#include <fcntl.h>           
-#include <sys/mman.h>        
-#include <semaphore.h>       
-#include <unistd.h>
-#include <string.h>
-#include "../include/local.h"
 #include "../include/local.h"
 
 
-#define SHM_SIZE 1024
-#define MSG_SIZE 1024
-
-
-#define PREPARATION_TEAM_COUNT 6
-#define BAKERS_TEAM_COUNT 3 
-
-#define MUTEX 0       // Controls access to read_count
+#define MAX_BUFFER_SIZE 1024#define MUTEX 0       // Controls access to read_count
 #define READ_COUNT 1  // Tracks number of readers
 #define WRITE_LOCK 2  // Ensures exclusive write access
+
+
 // Message Queue related info
 int mid;
 MESSAGE msg_rcv;
 MESSAGE requested_missing_items;
-
-
-
-
 
 
 
@@ -96,6 +81,10 @@ int sem_sweet_items_id;
 int sem_cheese_id;
 int sem_salami_id;
 
+int number_of_frustrated_customers;
+int nummber_of_complained_customers;
+int number_of_missing_items_customers;
+
 /*Chef production shm and sem */
 int shm_paste_id;
 char *shm_paste_ptr;
@@ -123,9 +112,9 @@ int sem_sweet_patiss_paste_id;
 int sem_savory_patiss_paste_id;
 
 char *chef_production_message[6];//pass
-
-
-union semun {
+/**/
+union semun
+{
     int val;
     struct semid_ds *buf;
     unsigned short *array;
@@ -335,7 +324,6 @@ int main(int argc, char **argv)
         savory_patisseries_shm_id, savory_patisseries_sem_id);
 
         create_basic_items_message();
-        create_production_items_message();
         //printf("From parent Combined IDs: %s\n", basic_items_message);
         fork_chefs(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids,savory_patiss_team_pids);
         fork_customers(customers_pids,sallers_pids);
