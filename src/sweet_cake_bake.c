@@ -58,9 +58,17 @@ void print_array(const int array[], int size) {
     printf("]\n");
 }
 
-
+void sigusr1_handler(int signum) {
+    printf("Received SIGUSR1 signal. Exiting...\n");
+    config.simulation_running = 0;
+    deattach_all_shm();
+    detach_shm_segments(cake_flavors_shm_ptr, config.cake_flavors_number);
+    detach_shm_segments(sweets_flavors_shm_ptr, config.sweets_flavors_number);
+    exit(0);
+}
 int main(int argc, char **argv) {
-
+    // catch SIGUSR1 signal
+    signal(SIGUSR1, sigusr1_handler);
     	strcpy(config_file_name, argv[1]);
 	
     	if (argc < 2) {
@@ -118,11 +126,6 @@ int main(int argc, char **argv) {
     while(1){
         do_work(cake_flavors_sem_id ,cake_flavors_shm_ptr,sweets_flavors_sem_id,sweets_flavors_shm_ptr );
     }
-
-
-    deattach_all_shm();
-    detach_shm_segments(cake_flavors_shm_ptr, config.cake_flavors_number);
-    detach_shm_segments(sweets_flavors_shm_ptr, config.sweets_flavors_number);
 
     printf("From sweet cake :Current Process ID: %d\n", getpid());
     return 0;

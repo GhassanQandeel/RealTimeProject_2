@@ -66,12 +66,17 @@ char *shm_paste_ptr;
 
 int sem_paste_id;
 
-
+void sigusr1_handler(int signum) {
+    printf("Received SIGUSR1 signal. Exiting...\n");
+    deattach_all_shm();
+    exit(0);
+}
 int main(int argc, char **argv) {
 
     pid_t pid = getpid();
 
-
+    // catch sigusr1 signal
+    signal(SIGUSR1, sigusr1_handler);
     parse_ids(argv[2]);
     sscanf(argv[3], "%d %d", &shm_sweet_patiss_paste_id, &sem_sweet_patiss_paste_id);
     sscanf(argv[4], "%d %d", &shm_paste_id, &sem_paste_id);
@@ -82,7 +87,6 @@ int main(int argc, char **argv) {
     do_work();
     }
     
-    deattach_all_shm();
     printf("From sweet_patiss :Current Process ID: %d\n", pid);
     return 0;
 }

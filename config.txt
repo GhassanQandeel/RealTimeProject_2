@@ -54,5 +54,5 @@ max_time_wait_customer=10;
 
 # Simulation Thresholds
 daily_profit_threshold=1000
-max_time=3    # Simulation max time in minutes
+max_time=300    # Simulation max time in seconds
 
