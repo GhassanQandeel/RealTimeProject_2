@@ -230,7 +230,7 @@ int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
 
 void do_work() {
     //random time to  achive the code 
-    int processing_time = (rand() % 6) + 1;
+    int processing_time = (rand() % 3) + 1;
     
     //random amount to take (between 1-3 units)
     int amount = (rand() % 3) + 1;

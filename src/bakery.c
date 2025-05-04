@@ -354,13 +354,13 @@ int main(int argc, char **argv)
 
         
         
-        //write_shared_int(sem_wheat_id, shm_wheat_ptr, 15);
-        //fork_chefs(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids,savory_patiss_team_pids);
-	    //fork_bakers( bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
+        fork_chefs(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids,savory_patiss_team_pids);
+	    fork_bakers( bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
         fork_opengl_process();
-
+        
 	    //fork_sallers(sallers_pids);
-	    //fork_suppliers(suppliers_pids);
+	    fork_suppliers(suppliers_pids);
+        
         //fork_customers(customers_pids,sallers_pids);
        
        
@@ -369,20 +369,13 @@ int main(int argc, char **argv)
         /*Create basic items shm _sem _and message to pass it */
        
          
-       
-        printf("bread :%s\n\n",bread_catagories_shm_sem_message);
-       
-        printf("sandwiches :%s\n\n",sandwiches_shm_sem_message);
-        
-        printf("cake :%s\n\n",cake_flavors_shm_sem_message);
-        printf("sweets :%s\n\n",sweets_flavors_shm_sem_message);
-        printf("sweet patiss :%s\n\n",sweet_patisseries_shm_sem_message);
-        printf("savory patiss :%s\n\n",savory_patisseries_shm_sem_message);
-        
+
 
          
    	
-        sleep(40);
+        
+        
+        sleep(50);
         //Abbas, when go bulid main while loop let check every 20 sec after half config.max_time by timer if there chefs need help or bakers
         //help_chefs_baased_on_quantity(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids
         //,savory_patiss_team_pids,sandwiches_sem_id,sandwiches_shm_ptr);  
@@ -734,14 +727,14 @@ void kill_process(pid_t pid)
 // Function to clean up by killing all processes
 void kill_teams(pid_t chefs_pids[] , pid_t baker_pids[], pid_t sallers_pids[], pid_t suppliers_pids[], pid_t customers_pids[]) {
     // Kill chefs processes
-/*
+
     for (int i = 0; i < config.chefs_number; i++)
     {
         kill_process(chefs_pids[i]);
     }
 
     
-    
+    /*
     
     // Kill bakers processes
     for (int i = 0; i < config.bakers_number; i++) {
@@ -752,11 +745,11 @@ void kill_teams(pid_t chefs_pids[] , pid_t baker_pids[], pid_t sallers_pids[], p
     for (int i = 0; i < config.sallers_number; i++) {
         kill_process(sallers_pids[i]);
     }
-     
+     */
     // Kill suppliers processes
     for (int i = 0; i < config.suppliers_number; i++) {
         kill_process(suppliers_pids[i]);
-    }*/
+    }
     //kill_process(opengl_pid);
 }
 
@@ -1387,7 +1380,7 @@ void help_chefs_baased_on_quantity(  pid_t chefs_pids[],
     int quantities[6];
     quantities[0] = read_from_shm(sem_paste_id, shm_paste_ptr);
     quantities[1] = read_from_shm(sem_cake_paste_id, shm_cake_paste_ptr);
-    quantities[2] = read_from_shm(sandwiches_sem_id[0], shm_sandwiches_ptr[0]);
+    quantities[2] = read_from_shm(sandwiches_sem_id[0], sandwiches_shm_ptr[0]);
     quantities[3] = read_from_shm(sem_sweets_paste_id, shm_sweets_paste_ptr);
     quantities[4] = read_from_shm(sem_sweet_patiss_paste_id, shm_sweet_patiss_paste_ptr);
     quantities[5] = read_from_shm(sem_savory_patiss_paste_id, shm_savory_patiss_paste_ptr);

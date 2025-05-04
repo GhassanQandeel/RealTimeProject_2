@@ -1,17 +1,92 @@
-//gcc bakery_opengl.c -o bakery_opengl -lglut -lGL -lGLU -lm
+/*This code is a simulation of a bakery management system using OpenGL and GLUT. It visualizes the operations of a bakery, including preparation, sales, and customer interactions. Here's a breakdown of the code and how it plots the simulation:
+
+### **Code Overview**
+1. **Shared Memory and Semaphores**:
+    - The code uses shared memory and semaphores to manage resources and products in the bakery. Shared memory is used to store quantities of ingredients and products, while semaphores ensure synchronization between processes.
+
+2. **Bakery State**:
+    - The `BakeryState` structure holds the state of the bakery, including:
+      - Number of staff (chefs, bakers, sellers).
+      - Number of customers and their states (entering, browsing, leaving).
+      - Products and their freshness.
+      - Resources (e.g., wheat, sugar, milk).
+      - Profit and customer satisfaction metrics.
+
+3. **OpenGL Visualization**:
+    - The bakery is divided into two areas:
+      - **Preparation Area**: Contains preparation and baking tables for chefs and bakers.
+      - **Sales Area**: Contains display tables for products and customers interacting with sellers.
+
+4. **Simulation Logic**:
+    - Customers are added periodically and move through different states (entering, browsing, leaving).
+    - Products are added to display tables based on shared memory values.
+    - Staff members (chefs, bakers, sellers) are visualized at their respective stations.
+    - Resources are updated and displayed as progress bars.
+
+5. **Termination Conditions**:
+    - The simulation stops if certain conditions are met, such as too many frustrated customers or a high profit.
+
+---
+
+### **How It Plots the Simulation**
+1. **Initialization**:
+    - The `init()` function sets up the OpenGL environment with a 2D orthographic projection and a light gray background.
+
+2. **Main Display Function**:
+    - The `display()` function is the core of the visualization. It:
+      - Draws dividers between the preparation and sales areas.
+      - Calls helper functions to draw tables, staff, customers, products, resources, and status.
+
+3. **Drawing Functions**:
+    - **Tables**: `drawTable()` draws preparation, baking, and display tables with labels.
+    - **Staff**: `drawStaffMember()` visualizes chefs, bakers, and sellers with different colors and accessories (e.g., chef hats).
+    - **Products**: `drawProduct()` visualizes products (e.g., bread, cakes) as colored rectangles with freshness indicators.
+    - **Customers**: `drawCustomer()` visualizes customers with different moods (neutral, happy, frustrated, angry) using colors and facial expressions.
+    - **Resources**: `drawResources()` displays progress bars for resources like wheat, sugar, and milk.
+    - **Status**: `drawStatus()` shows profit, customer metrics, and simulation status.
+
+4. **Simulation Updates**:
+    - The `update()` function is called periodically (every 16ms) to:
+      - Add new customers and products.
+      - Update customer movements and interactions.
+      - Update product freshness and resource levels.
+      - Check termination conditions.
+
+5. **Interaction with Shared Memory**:
+    - Functions like `modify_shared_int()` read and update shared memory values for resources and products, ensuring synchronization with semaphores.
+
+---
+
+### **Visualization Layout**
+- **Preparation Area**:
+  - Contains three preparation tables (e.g., Dough Prep, Baking Station, Decoration) and three baking tables (e.g., Bread Baking, Cake Baking).
+  - Staff members (chefs and bakers) are positioned near these tables.
+
+- **Sales Area**:
+  - Contains six display tables for different product types (e.g., Paste, Cakes, Sandwiches, Sweets).
+  - Customers move around these tables and interact with sellers.
+
+- **Resources and Status**:
+  - Resource levels are displayed as progress bars on the top-left.
+  - Profit, customer metrics, and simulation status are displayed on the top-right.
+
+---
+
+### **Key Features**
+- **Dynamic Visualization**:
+  - Customers and products are added dynamically, and their states are updated in real-time.
+  - Freshness of products is visualized with color-coded bars.
+
+- **Synchronization**:
+  - Shared memory and semaphores ensure that the simulation reflects the current state of resources and products.
+
+- **Termination Conditions**:
+  - The simulation stops when certain conditions are met, such as high profit or too many frustrated customers.
+
+This code provides a comprehensive simulation of a bakery's operations, visualized in a 2D OpenGL environment.
+*/
 
 
-
-// bakery_visualizer.c
-// Compile with: gcc bakery_visualizer.c -o bakery_visualizer -lGL -lGLU -lglut
-//gcc -o bakery_visualizer bakery_visualizer.c-lglut -lGL -lGLU -lm
-/* 
-Natural skin tone (peach) when entering
-Green when happy (purchased)
-Yellow when frustrated (left without buying)
-Red should appear for angry customers (complained)
-Body: Always blue (the rectangle you're seeing)*/
-// bakery_visualizer.c
 #include <GL/glut.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,92 +98,85 @@ Body: Always blue (the rectangle you're seeing)*/
 #include <sys/shm.h>
 #include <sys/sem.h>
 #include <sys/wait.h>
-/*Configuration*/
+
+
+/* Configuration */
 Config config;
 char config_file_name[30];
-#define MUTEX 0       // Controls access to read_count
-#define READ_COUNT 1  // Tracks number of readers
-#define WRITE_LOCK 2  // Ensures exclusive write access
+#define MUTEX 0
+#define READ_COUNT 1
+#define WRITE_LOCK 2
 
-/*Shared memory ID and semaphore id for each basic items (milk yasset ....)*/
+/* Shared memory and semaphore IDs */
+int shm_wheat_id, sem_wheat_id;
+int shm_yeast_id, sem_yeast_id;
+int shm_butter_id, sem_butter_id;
+int shm_milk_id, sem_milk_id;
+int shm_sugar_id, sem_sugar_id;
+int shm_salt_id, sem_salt_id;
+int shm_sweet_items_id, sem_sweet_items_id;
+int shm_cheese_id, sem_cheese_id;
+int shm_salami_id, sem_salami_id;
 
+/* Chef production */
+int shm_paste_id, sem_paste_id;
+int shm_cake_paste_id, sem_cake_paste_id;
+int shm_sandwiches_id, sem_sandwiches_id;
+int shm_sweets_paste_id, sem_sweets_paste_id;
+int shm_sweet_patiss_paste_id, sem_sweet_patiss_paste_id;
+int shm_savory_patiss_paste_id, sem_savory_patiss_paste_id;
 
-int shm_wheat_id;
-char *shm_wheat_ptr;
-int shm_yeast_id;
-char *shm_yeast_ptr;
-int shm_butter_id;
-char *shm_butter_ptr;
-int shm_milk_id;
-char *shm_milk_ptr;
-int shm_sugar_id;
-char *shm_sugar_ptr;
-int shm_salt_id;
-char *shm_salt_ptr;
-int shm_sweet_items_id;
-char *shm_sweet_items_ptr;
-int shm_cheese_id;
-char *shm_cheese_ptr;
-int shm_salami_id;
-char *shm_salami_ptr;
-
-int sem_wheat_id;
-int sem_yeast_id;
-int sem_butter_id;
-int sem_milk_id;
-int sem_sugar_id;
-int sem_salt_id;
-int sem_sweet_items_id;
-int sem_cheese_id;
-int sem_salami_id;
+/* Pointers to shared memory */
+char *shm_wheat_ptr, *shm_yeast_ptr, *shm_butter_ptr, *shm_milk_ptr;
+char *shm_sugar_ptr, *shm_salt_ptr, *shm_sweet_items_ptr, *shm_cheese_ptr, *shm_salami_ptr;
+char *shm_paste_ptr, *shm_cake_paste_ptr, *shm_sandwiches_ptr;
+char *shm_sweets_paste_ptr, *shm_sweet_patiss_paste_ptr, *shm_savory_patiss_paste_ptr;
 
 
 
-/*Chef production shm and sem */
-int shm_paste_id;
-char *shm_paste_ptr;
+// Global variables for Bread Categories
+int *bread_catagories_shm_id;
+int *bread_catagories_sem_id;
+char **bread_catagories_shm_ptr;
 
-int shm_cake_paste_id;
-char *shm_cake_paste_ptr;
+// Global variables for Sandwiches
+int *sandwiches_shm_id;
+int *sandwiches_sem_id;
+char **sandwiches_shm_ptr;
 
-int shm_sandwiches_id;
-char *shm_sandwiches_ptr;
+// Global variables for Cake Flavors
+int *cake_flavors_shm_id;
+int *cake_flavors_sem_id;
+char **cake_flavors_shm_ptr;
 
-int shm_sweets_paste_id;
-char *shm_sweets_paste_ptr;
+// Global variables for Sweets Flavors
+int *sweets_flavors_shm_id;
+int *sweets_flavors_sem_id;
+char **sweets_flavors_shm_ptr;
 
-int shm_sweet_patiss_paste_id;
-char *shm_sweet_patiss_paste_ptr;
+// Global variables for Sweet Patisseries
+int *sweet_patisseries_shm_id;
+int *sweet_patisseries_sem_id;
+char **sweet_patisseries_shm_ptr;
 
-int shm_savory_patiss_paste_id;
-char *shm_savory_patiss_paste_ptr;
-
-int sem_paste_id;
-int sem_cake_paste_id;
-int sem_sandwiches_id;
-int sem_sweets_paste_id;
-int sem_sweet_patiss_paste_id;
-int sem_savory_patiss_paste_id;
-
+// Global variables for Savory Patisseries
+int *savory_patisseries_shm_id;
+int *savory_patisseries_sem_id;
+char **savory_patisseries_shm_ptr;
 
 
+
+
+/* Constants */
 #define MAX_CUSTOMERS 20
 #define MAX_PRODUCTS 50
 #define MAX_STAFF 10
 
-// Product types
-#define BREAD 0
-#define CAKE 1
-#define SANDWICH 2
-#define SWEET 3
-#define PATISSERIE 4
-#define PRODUCT_TYPES 5
+/* Product and staff types */
+enum ProductType { BREAD, CAKE, SANDWICH, SWEET, SWEET_PATISS, SAVORY_PATISS, PRODUCT_TYPES };
+enum StaffType { CHEF, BAKER, SELLER };
 
-// Staff types
-#define CHEF 0
-#define BAKER 1
-#define SELLER 2
-
+/* Structures */
 typedef struct {
     float x, y;
     int active;
@@ -133,30 +201,28 @@ typedef struct {
 } Staff;
 
 typedef struct {
-    // Configuration
+    float x, y;
+    float width, height;
+    const char* label;
+} Table;
+
+/* Bakery state */
+typedef struct {
     int bread_categories;
     int sandwich_types;
     int cake_flavors;
     int sweets_flavors;
     int patisserie_types;
-    
-    // Staff counts
     int chefs;
     int bakers;
     int sellers;
     int supply_employees;
-    
-    // Resources
-    float resources[8]; // wheat, yeast, butter, milk, sugar_salt, sweet_items, cheese, salami
-    
-    // Stats
+    float resources[9]; // wheat, yeast, butter, milk, sugar, salt, sweet_items, cheese, salami
     int customers_served;
     int customers_frustrated;
     int customers_complained;
     int customers_missing_items;
     float profit;
-    
-    // Simulation state
     int simulation_running;
     Customer customers[MAX_CUSTOMERS];
     Product products[MAX_PRODUCTS];
@@ -166,29 +232,33 @@ typedef struct {
 } BakeryState;
 
 BakeryState bakery;
-
-// Table positions
-typedef struct {
-    float x, y;
-    float width, height;
-    const char* label;
-} Table;
-
-Table prep_tables[3] = {
-    {150, 650, 200, 80, "Dough Prep"},   // Dough preparation
-    {450, 650, 200, 80, "Baking Station"}, // Baking
-    {750, 650, 200, 80, "Decoration"}     // Cake decoration
+/* Table definitions */
+Table prep_tables[5] = {
+    {150, 600, 150, 60, "Paste"},
+    {350, 600, 150, 60, "Cake Paste"},
+    {550, 600, 150, 60, "Sweet Paste"},
+    {750, 600, 150, 60, "Sweet Patiss Paste"},
+    {950, 600, 150, 60, "Savory Patiss Paste"}
 };
 
-Table display_tables[PRODUCT_TYPES] = {
-    {150, 250, 150, 60, "Bread"},      // Bread table
-    {325, 250, 150, 60, "Cakes"},      // Cake table
-    {500, 250, 150, 60, "Sandwiches"}, // Sandwich table
-    {675, 250, 150, 60, "Sweets"},     // Sweet table
-    {850, 250, 150, 60, "Patisserie"}  // Patisserie table
+Table baking_tables[3] = {
+    {350, 400, 150, 60, "Bread Baking"},
+    {550, 400, 150, 60, "Cake Sweets Baking"}, // Shifted under Sweet Paste table
+    {750, 400, 150, 60, "Patiss Baking"}
+};
+Table display_tables[6] = {
+    {10, 100, 200, 80, "Bread"},
+    {250, 100, 200, 80, "Cakes"},
+    {490, 100, 200, 80, "Sandwiches"},
+    {730, 100, 200, 80, "Sweets"},
+    {970, 100, 200, 80, "Sweet Patiss"},
+    {1210, 100, 200, 80, "Savory Patiss"}
 };
 
-// Function prototypes
+
+void drawPreparationProgress();
+void drawFinalProducts();
+/* Function prototypes */
 void init();
 void display();
 void reshape(int w, int h);
@@ -213,7 +283,6 @@ void updateProducts();
 void updateStaff();
 void drawTable(float x, float y, float width, float height, const char* label);
 
-
 void parse_ids(const char *buffer);
 void attach_shm_basic_items();
 void deattach_shm(int shmid, char *ptr);
@@ -224,150 +293,89 @@ void attach_shm_segments(int* shm_ids, char** shm_ptrs, int count);
 void detach_shm_segments(char** shm_ptrs, int count);
 
 int main(int argc, char** argv) {
-
-
-
-
-    strcpy(config_file_name, argv[1]);
-    for (int i = 0; i < argc; i++) {
-        printf("argv[%d]: %s\n", i, argv[i]);
-    }
-
-    if (argc < 8)
-    {
-        fprintf(stderr, "Usage: %s <config_file> ....\n", argv[0]);
+    // Verify command line arguments
+    if (argc < 15) {
+        fprintf(stderr, "Usage: %s <config_file> <basic_items> <paste> <cake> <sandwiches> <sweets> <sweet_patiss> <savory_patiss> <bread_shm> <sandwiches_shm> <cake_shm> <sweets_shm> <sweet_patiss_shm> <savory_patiss_shm>\n", argv[0]);
         return EXIT_FAILURE;
     }
 
-    if (load_config(config_file_name, &config) == 0)
-    {
-        // printConfig(&config);
-        printf("Success to load configuration.\n");
-    }
-    else
-    {
-        fprintf(stderr, "Failed to load configuration.\n");
+    // Load configuration
+    strcpy(config_file_name, argv[1]);
+    if (load_config(config_file_name, &config) != 0) {
+        fprintf(stderr, "Failed to load configuration\n");
+        return EXIT_FAILURE;
     }
 
-
-    // For Bread Categories
-    int bread_catagories_shm_id[config.bread_catagories_number];
-    int bread_catagories_sem_id[config.bread_catagories_number];
-    char *bread_catagories_shm_ptr[config.bread_catagories_number];
-
-    // For Sandwiches
-    int sandwiches_shm_id[config.sandwiches_number];
-    int sandwiches_sem_id[config.sandwiches_number];
-    char *sandwiches_shm_ptr[config.sandwiches_number];
-
-    // For Cake Flavors
-    int cake_flavors_shm_id[config.cake_flavors_number];
-    int cake_flavors_sem_id[config.cake_flavors_number];
-    char *cake_flavors_shm_ptr[config.cake_flavors_number];
-
-    // For Sweets Flavors
-    int sweets_flavors_shm_id[config.sweets_flavors_number];
-    int sweets_flavors_sem_id[config.sweets_flavors_number];
-    char *sweets_flavors_shm_ptr[config.sweets_flavors_number];
-
-    // For Sweet Patisseries
-    int sweet_patisseries_shm_id[config.sweet_patisseries_number];
-    int sweet_patisseries_sem_id[config.sweet_patisseries_number];
-    char *sweet_patisseries_shm_ptr[config.sweet_patisseries_number];
-
-    // For Savory Patisseries
-    int savory_patisseries_shm_id[config.savory_patisseries_number];
-    int savory_patisseries_sem_id[config.savory_patisseries_number];
-    char *savory_patisseries_shm_ptr[config.savory_patisseries_number];
-
-
-
-
-
-    parse_ids(argv[2]);
+    // Parse shared memory and semaphore IDs
+    parse_ids(argv[2]);  // Basic items
+    
+    // Chef production items
     sscanf(argv[3], "%d %d", &shm_paste_id, &sem_paste_id);
     sscanf(argv[4], "%d %d", &shm_cake_paste_id, &sem_cake_paste_id);
     sscanf(argv[5], "%d %d", &shm_sandwiches_id, &sem_sandwiches_id);
     sscanf(argv[6], "%d %d", &shm_sweets_paste_id, &sem_sweets_paste_id);
     sscanf(argv[7], "%d %d", &shm_sweet_patiss_paste_id, &sem_sweet_patiss_paste_id);
     sscanf(argv[8], "%d %d", &shm_savory_patiss_paste_id, &sem_savory_patiss_paste_id);
+   // Allocate memory for Bread Categories
+    bread_catagories_shm_id = malloc(config.bread_catagories_number * sizeof(int));
+    bread_catagories_sem_id = malloc(config.bread_catagories_number * sizeof(int));
+    bread_catagories_shm_ptr = malloc(config.bread_catagories_number * sizeof(char *));
 
-    // Decode shared memory and semaphore IDs for each category
+    // Allocate memory for Sandwiches
+    sandwiches_shm_id = malloc(config.sandwiches_number * sizeof(int));
+    sandwiches_sem_id = malloc(config.sandwiches_number * sizeof(int));
+    sandwiches_shm_ptr = malloc(config.sandwiches_number * sizeof(char *));
+
+    // Allocate memory for Cake Flavors
+    cake_flavors_shm_id = malloc(config.cake_flavors_number * sizeof(int));
+    cake_flavors_sem_id = malloc(config.cake_flavors_number * sizeof(int));
+    cake_flavors_shm_ptr = malloc(config.cake_flavors_number * sizeof(char *));
+
+    // Allocate memory for Sweets Flavors
+    sweets_flavors_shm_id = malloc(config.sweets_flavors_number * sizeof(int));
+    sweets_flavors_sem_id = malloc(config.sweets_flavors_number * sizeof(int));
+    sweets_flavors_shm_ptr = malloc(config.sweets_flavors_number * sizeof(char *));
+
+    // Allocate memory for Sweet Patisseries
+    sweet_patisseries_shm_id = malloc(config.sweet_patisseries_number * sizeof(int));
+    sweet_patisseries_sem_id = malloc(config.sweet_patisseries_number * sizeof(int));
+    sweet_patisseries_shm_ptr = malloc(config.sweet_patisseries_number * sizeof(char *));
+
+    // Allocate memory for Savory Patisseries
+    savory_patisseries_shm_id = malloc(config.savory_patisseries_number * sizeof(int));
+    savory_patisseries_sem_id = malloc(config.savory_patisseries_number * sizeof(int));
+    savory_patisseries_shm_ptr = malloc(config.savory_patisseries_number * sizeof(char *));
     decode_shm_sem_message(argv[9], bread_catagories_shm_id, bread_catagories_sem_id, config.bread_catagories_number);
     decode_shm_sem_message(argv[10], sandwiches_shm_id, sandwiches_sem_id, config.sandwiches_number);
     decode_shm_sem_message(argv[11], cake_flavors_shm_id, cake_flavors_sem_id, config.cake_flavors_number);
     decode_shm_sem_message(argv[12], sweets_flavors_shm_id, sweets_flavors_sem_id, config.sweets_flavors_number);
     decode_shm_sem_message(argv[13], sweet_patisseries_shm_id, sweet_patisseries_sem_id, config.sweet_patisseries_number);
     decode_shm_sem_message(argv[14], savory_patisseries_shm_id, savory_patisseries_sem_id, config.savory_patisseries_number);
-    // Attach shared memory segments
-    attach_shm_segments(bread_catagories_shm_id, bread_catagories_shm_ptr, config.bread_catagories_number);
-    attach_shm_segments(sandwiches_shm_id, sandwiches_shm_ptr, config.sandwiches_number);
-    attach_shm_segments(cake_flavors_shm_id, cake_flavors_shm_ptr, config.cake_flavors_number);
-    attach_shm_segments(sweets_flavors_shm_id, sweets_flavors_shm_ptr, config.sweets_flavors_number);
-    attach_shm_segments(sweet_patisseries_shm_id, sweet_patisseries_shm_ptr, config.sweet_patisseries_number);
-    attach_shm_segments(savory_patisseries_shm_id, savory_patisseries_shm_ptr, config.savory_patisseries_number);
-
-
-    /*
 
 
 
 
-    int wheat_value=modify_shared_int(sem_wheat_id, shm_wheat_ptr, 0);
-    int yeast_value=modify_shared_int(sem_yeast_id, shm_yeast_ptr, 0);
-    int butter_value=modify_shared_int(sem_butter_id, shm_butter_ptr, 0);
-    int milk_value=modify_shared_int(sem_milk_id, shm_milk_ptr, 0);
-    int sugar_value=modify_shared_int(sem_sugar_id, shm_sugar_ptr, 0);
-    int salt_value=modify_shared_int(sem_salt_id, shm_salt_ptr, 0);
-    int sweet_items_value=modify_shared_int(sem_sweet_items_id, shm_sweet_items_ptr, 0);
-    int cheese_value=modify_shared_int(sem_cheese_id, shm_cheese_ptr, 0);
-    int salami_value=modify_shared_int(sem_salami_id, shm_salami_ptr, 0);
-    */
-
-    /*
-        for side bars .. start from zero then read from shared memory 
-
-        divide suger and salt to two bars like in  shared memory as in shared memory
-        
-        create  six tables for each type of product (paste,cake,sandwiches,sweets,patisseries)
-        create 3 tables for each type of product to bake it (or any think you want )(bake )
-        for patiss divide table two tables , one for seweet and one for savory  
-        make place for each type of product bread Catagories ,sweet flavors , cake flacors ,etc 
-        in each place should print the data in shared memory using the function modifiy_shared_int
-
-    */ 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    srand(time(NULL));
-    
     // Initialize bakery state
     memset(&bakery, 0, sizeof(BakeryState));
     bakery.simulation_running = 1;
     bakery.chefs = config.chefs_number;
     bakery.bakers = config.bakers_number;
     bakery.sellers = config.sallers_number;
-    bakery.supply_employees = 1;
-    bakery.bread_categories = 3;
-    bakery.sandwich_types = 2;
-    bakery.cake_flavors = 4;
-    bakery.sweets_flavors = 3;
-    bakery.patisserie_types = 2;
-    
-    for (int i = 0; i < 8; i++) {
-        bakery.resources[i] = 1.0f;
-    }
+    bakery.bread_categories = config.bread_catagories_number;
+    bakery.sandwich_types = config.sandwiches_number;
+    bakery.cake_flavors = config.cake_flavors_number;
+    bakery.sweets_flavors = config.sweets_flavors_number;
+    bakery.patisserie_types = config.sweet_patisseries_number + config.savory_patisseries_number;
+
+    // Attach to shared memory segments
+    attach_shm_basic_items();
+    attach_shm_segments(bread_catagories_shm_id, bread_catagories_shm_ptr, config.bread_catagories_number);
+    attach_shm_segments(sandwiches_shm_id, sandwiches_shm_ptr, config.sandwiches_number);
+    attach_shm_segments(cake_flavors_shm_id, cake_flavors_shm_ptr, config.cake_flavors_number);
+    attach_shm_segments(sweets_flavors_shm_id, sweets_flavors_shm_ptr, config.sweets_flavors_number);
+    attach_shm_segments(sweet_patisseries_shm_id, sweet_patisseries_shm_ptr, config.sweet_patisseries_number);
+    attach_shm_segments(savory_patisseries_shm_id, savory_patisseries_shm_ptr, config.savory_patisseries_number);
+ 
 
     // Initialize staff positions
     for (int i = 0; i < bakery.chefs; i++) {
@@ -398,10 +406,13 @@ int main(int argc, char** argv) {
     glutReshapeFunc(reshape);
     glutTimerFunc(16, update, 0);
 
+    // Initialize OpenGL
     init();
+
+    // Main loop
     glutMainLoop();
 
-    
+    // Cleanup - detach from shared memory
     deattach_all_shm();
     detach_shm_segments(bread_catagories_shm_ptr, config.bread_catagories_number);
     detach_shm_segments(sandwiches_shm_ptr, config.sandwiches_number);
@@ -409,53 +420,64 @@ int main(int argc, char** argv) {
     detach_shm_segments(sweets_flavors_shm_ptr, config.sweets_flavors_number);
     detach_shm_segments(sweet_patisseries_shm_ptr, config.sweet_patisseries_number);
     detach_shm_segments(savory_patisseries_shm_ptr, config.savory_patisseries_number);
-    // Detach shared memory segments
+    // Free memory for Bread Categories
+    free(bread_catagories_shm_id);
+    free(bread_catagories_sem_id);
+    free(bread_catagories_shm_ptr);
 
-    return 0;
+    // Free memory for Sandwiches
+    free(sandwiches_shm_id);
+    free(sandwiches_sem_id);
+    free(sandwiches_shm_ptr);
+
+    // Free memory for Cake Flavors
+    free(cake_flavors_shm_id);
+    free(cake_flavors_sem_id);
+    free(cake_flavors_shm_ptr);
+
+    // Free memory for Sweets Flavors
+    free(sweets_flavors_shm_id);
+    free(sweets_flavors_sem_id);
+    free(sweets_flavors_shm_ptr);
+
+    // Free memory for Sweet Patisseries
+    free(sweet_patisseries_shm_id);
+    free(sweet_patisseries_sem_id);
+    free(sweet_patisseries_shm_ptr);
+
+    // Free memory for Savory Patisseries
+    free(savory_patisseries_shm_id);
+    free(savory_patisseries_sem_id);
+    free(savory_patisseries_shm_ptr);
+
+    return EXIT_SUCCESS;
 }
-
 int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
-    static int read_count = 0; // Track number of readers inside this function
-    printf("[DEBUG] File path: paste \n");
-    printf("[DEBUG] Starting modify_shared_int()...\n");
-
-    // --- Start Reader-Writer synchronization (Reader only) ---
-
-    // Acquire mutex to protect read_count
     struct sembuf op_wait_mutex = {MUTEX, -1, SEM_UNDO};
     semop(sem_id, &op_wait_mutex, 1);
 
+    static int read_count = 0;
     read_count++;
 
     if (read_count == 1) {
-        // First reader locks write lock
         struct sembuf op_wait_write_lock = {WRITE_LOCK, -1, SEM_UNDO};
         semop(sem_id, &op_wait_write_lock, 1);
     }
 
-    // Release mutex
     struct sembuf op_release_mutex = {MUTEX, 1, SEM_UNDO};
     semop(sem_id, &op_release_mutex, 1);
 
-    // --- Critical Section: Reading value ---
-    int current_value = *((int *)shm_ptr);  // Read int from shared memory
-    printf("[DEBUG] Read value from shared memory: %d\n", current_value);
-    // --- End Reading ---
+    int current_value = *((int *)shm_ptr);
 
-    // Acquire mutex again to safely modify read_count
     semop(sem_id, &op_wait_mutex, 1);
-
     read_count--;
 
     if (read_count == 0) {
-        // Last reader releases write lock
         struct sembuf op_release_write_lock = {WRITE_LOCK, 1, SEM_UNDO};
         semop(sem_id, &op_release_write_lock, 1);
     }
 
     semop(sem_id, &op_release_mutex, 1);
-
-    printf("[DEBUG] Finished modify_shared_int() (Read only)\n\n");
     return current_value;
 }
 
@@ -675,7 +697,9 @@ void display() {
     
     drawDividers();
     drawPreparationArea();
+    drawPreparationProgress();
     drawSalesArea();
+    drawFinalProducts();
     drawResources();
     drawStatus();
     
@@ -695,35 +719,57 @@ void drawDividers() {
     glColor3f(0.5f, 0.5f, 0.5f);
     glLineWidth(2.0);
     glBegin(GL_LINES);
-    glVertex2f(50, 400);
-    glVertex2f(1150, 400);
+    glVertex2f(50, 330); // Shifted further down
+    glVertex2f(1150, 330); // Shifted further down
     glEnd();
     
     // Label for areas
-    glColor3f(0.3f, 0.3f, 0.3f);
-    drawText(100, 380, "PREPARATION AREA");
-    drawText(100, 180, "SALES AREA");
+    glColor3f(0.0f, 0.0f, 0.8f); // Cold blue color for text
+    drawText(100, 340, "PREPARATION AREA"); // Above the line
+    drawText(100, 300, "SALES AREA"); // Below the line
 }
 
 void drawPreparationArea() {
     // Draw preparation tables
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 5; i++) {
         drawTable(prep_tables[i].x, prep_tables[i].y, 
                  prep_tables[i].width, prep_tables[i].height, 
                  prep_tables[i].label);
     }
     
-    // Draw staff in preparation area
-    for (int i = 0; i < bakery.chefs + bakery.bakers; i++) {
-        drawStaffMember(bakery.staff[i].x, bakery.staff[i].y, 
-                       bakery.staff[i].type, bakery.staff[i].busy);
+    // Draw baking tables
+    for (int i = 0; i < 3; i++) {
+        drawTable(baking_tables[i].x, baking_tables[i].y,
+                 baking_tables[i].width, baking_tables[i].height,
+                 baking_tables[i].label);
     }
+    
+    // Draw chefs
+    for (int i = 0; i < bakery.chefs; i++) {
+        int table_index = i % 5; // Cycle through the tables
+        drawStaffMember(prep_tables[table_index].x + prep_tables[table_index].width / 2, 
+                        prep_tables[table_index].y - 40, 
+                        bakery.staff[i].type, bakery.staff[i].busy);
+    }
+    // Draw bakers
+    for (int i = bakery.chefs; i < bakery.chefs + bakery.bakers; i++) {
+        int table_index = (i - bakery.chefs) % 3; // Cycle through the baking tables
+        drawStaffMember(baking_tables[table_index].x + baking_tables[table_index].width / 2, 
+                        baking_tables[table_index].y - 40, 
+                        bakery.staff[i].type, bakery.staff[i].busy);
+    }
+
 }
 
 void drawSalesArea() {
     // Draw product display tables
-    drawProductTables();
-    drawProducts();
+    for (int i = 0; i < 6; i++) {
+        drawTable(display_tables[i].x, display_tables[i].y,
+                 display_tables[i].width, display_tables[i].height,
+                 display_tables[i].label);
+    }
+    
+    
     
     // Draw customers
     drawCustomers();
@@ -731,8 +777,10 @@ void drawSalesArea() {
     // Draw sellers
     for (int i = bakery.chefs + bakery.bakers; 
          i < bakery.chefs + bakery.bakers + bakery.sellers; i++) {
-        drawStaffMember(bakery.staff[i].x, bakery.staff[i].y, 
-                       bakery.staff[i].type, bakery.staff[i].busy);
+        int table_index = (i - bakery.chefs - bakery.bakers) % 6; // Cycle through the display tables
+        drawStaffMember(display_tables[table_index].x +60, // Right upper corner of the table
+                        display_tables[table_index].y+1000, 
+                        bakery.staff[i].type, bakery.staff[i].busy);
     }
 }
 
@@ -788,6 +836,20 @@ void drawProductTables() {
 }
 
 void drawStaffMember(float x, float y, int type, int busy) {
+    // Adjust position based on type
+    if (type == CHEF) {
+        y = prep_tables[0].y - 40; // Position chefs under preparation tables
+    } else if (type == BAKER) {
+        y = baking_tables[0].y - 40; // Position bakers under baking tables
+    } else if (type == SELLER) {
+        y = display_tables[0].y + 60; // Position sellers above display tables
+    }
+
+    // Calculate spacing for multiple staff members
+    int staff_count = (type == CHEF) ? bakery.chefs : (type == BAKER) ? bakery.bakers : bakery.sellers;
+    float spacing = 30.0f; // Space between staff members
+    x += (busy - (staff_count / 2.0f)) * spacing;
+
     // Body
     switch(type) {
         case CHEF:
@@ -853,6 +915,86 @@ void drawStaffMember(float x, float y, int type, int busy) {
         glVertex2f(x + 15, y + 5);
         glEnd();
     }
+}
+void drawProduct(float x, float y, int type) {
+    // Set color based on product type
+    switch (type) {
+        case BREAD:
+            glColor3f(0.82f, 0.70f, 0.55f); // Light brown for bread
+            break;
+        case CAKE:
+            glColor3f(0.96f, 0.76f, 0.76f); // Pink for cake
+            break;
+        case SANDWICH:
+            glColor3f(0.94f, 0.90f, 0.55f); // Yellow for sandwich
+            break;
+        case SWEET:
+            glColor3f(0.76f, 0.96f, 0.76f); // Light green for sweets
+            break;
+        case SWEET_PATISS:
+            glColor3f(0.96f, 0.76f, 0.96f); // Light purple for sweet patisserie
+            break;
+        case SAVORY_PATISS:
+            glColor3f(0.76f, 0.76f, 0.96f); // Light blue for savory patisserie
+            break;
+        default:
+            glColor3f(0.8f, 0.8f, 0.8f); // Gray for unknown
+            break;
+    }
+
+    // Draw the product (a simple rectangle)
+    glBegin(GL_QUADS);
+    glVertex2f(x - 8, y - 8);
+    glVertex2f(x + 8, y - 8);
+    glVertex2f(x + 8, y + 8);
+    glVertex2f(x - 8, y + 8);
+    glEnd();
+
+    // Draw a border around the product
+    glColor3f(0.3f, 0.3f, 0.3f);
+    glBegin(GL_LINE_LOOP);
+    glVertex2f(x - 8, y - 8);
+    glVertex2f(x + 8, y - 8);
+    glVertex2f(x + 8, y + 8);
+    glVertex2f(x - 8, y + 8);
+    glEnd();
+
+    // Optional: Add a small decoration based on type
+    glPointSize(3.0f);
+    glBegin(GL_POINTS);
+    switch (type) {
+        case BREAD:
+            glColor3f(0.62f, 0.50f, 0.35f); // Darker brown for bread texture
+            glVertex2f(x - 4, y);
+            glVertex2f(x + 4, y);
+            break;
+        case CAKE:
+            glColor3f(0.96f, 0.86f, 0.86f); // Lighter pink for cake decoration
+            glVertex2f(x, y + 4);
+            glVertex2f(x, y - 4);
+            break;
+        case SANDWICH:
+            glColor3f(0.8f, 0.6f, 0.2f); // Darker yellow for sandwich filling
+            glVertex2f(x - 2, y);
+            glVertex2f(x + 2, y);
+            break;
+        case SWEET:
+            glColor3f(0.5f, 0.8f, 0.5f); // Darker green for sweet details
+            glVertex2f(x - 3, y - 3);
+            glVertex2f(x + 3, y + 3);
+            break;
+        case SWEET_PATISS:
+            glColor3f(0.8f, 0.5f, 0.8f); // Darker purple for patisserie details
+            glVertex2f(x - 3, y + 3);
+            glVertex2f(x + 3, y - 3);
+            break;
+        case SAVORY_PATISS:
+            glColor3f(0.5f, 0.5f, 0.8f); // Darker blue for patisserie details
+            glVertex2f(x, y - 5);
+            glVertex2f(x, y + 5);
+            break;
+    }
+    glEnd();
 }
 
 // [Rest of the functions (drawCustomer, drawProduct, update, addCustomer, 
@@ -1027,176 +1169,106 @@ void updateProducts() {
 
 
 void drawProducts() {
-    // Organize products by type first for better table arrangement
-    int products_per_type[PRODUCT_TYPES] = {0};
-    
-    // Count products per type
+    // Get product counts from shared memory
+    int paste_count = modify_shared_int(sem_paste_id, shm_paste_ptr, 0);
+    int cake_count = modify_shared_int(sem_cake_paste_id, shm_cake_paste_ptr, 0);
+    int sandwich_count = modify_shared_int(sem_sandwiches_id, shm_sandwiches_ptr, 0);
+    int sweets_count = modify_shared_int(sem_sweets_paste_id, shm_sweets_paste_ptr, 0);
+    int sweet_patiss_count = modify_shared_int(sem_sweet_patiss_paste_id, shm_sweet_patiss_paste_ptr, 0);
+    int savory_patiss_count = modify_shared_int(sem_savory_patiss_paste_id, shm_savory_patiss_paste_ptr, 0);
+
+    // Clear existing products
+    for (int i = 0; i < MAX_PRODUCTS; i++) {
+        bakery.products[i].freshness = 0;
+    }
+
+    // Draw paste products (BREAD)
+    int product_index = 0;
+    for (int i = 0; i < paste_count && product_index < MAX_PRODUCTS; i++) {
+        bakery.products[product_index].type = BREAD;
+        bakery.products[product_index].freshness = 100;
+        bakery.products[product_index].x = display_tables[0].x + 30 + (i % 3) * 40;
+        bakery.products[product_index].y = display_tables[0].y + 20 + (i / 3) * 30;
+        product_index++;
+    }
+
+    // Draw cake products (CAKE)
+    for (int i = 0; i < cake_count && product_index < MAX_PRODUCTS; i++) {
+        bakery.products[product_index].type = CAKE;
+        bakery.products[product_index].freshness = 100;
+        bakery.products[product_index].x = display_tables[1].x + 30 + (i % 3) * 40;
+        bakery.products[product_index].y = display_tables[1].y + 20 + (i / 3) * 30;
+        product_index++;
+    }
+
+    // Draw sandwich products (SANDWICH)
+    for (int i = 0; i < sandwich_count && product_index < MAX_PRODUCTS; i++) {
+        bakery.products[product_index].type = SANDWICH;
+        bakery.products[product_index].freshness = 100;
+        bakery.products[product_index].x = display_tables[2].x + 30 + (i % 3) * 40;
+        bakery.products[product_index].y = display_tables[2].y + 20 + (i / 3) * 30;
+        product_index++;
+    }
+
+    // Draw sweets products (SWEET)
+    for (int i = 0; i < sweets_count && product_index < MAX_PRODUCTS; i++) {
+        bakery.products[product_index].type = SWEET;
+        bakery.products[product_index].freshness = 100;
+        bakery.products[product_index].x = display_tables[3].x + 30 + (i % 3) * 40;
+        bakery.products[product_index].y = display_tables[3].y + 20 + (i / 3) * 30;
+        product_index++;
+    }
+
+    // Draw sweet patisserie products (SWEET_PATISS)
+    for (int i = 0; i < sweet_patiss_count && product_index < MAX_PRODUCTS; i++) {
+        bakery.products[product_index].type = SWEET_PATISS;
+        bakery.products[product_index].freshness = 100;
+        bakery.products[product_index].x = display_tables[4].x + 30 + (i % 3) * 40;
+        bakery.products[product_index].y = display_tables[4].y + 20 + (i / 3) * 30;
+        product_index++;
+    }
+
+    // Draw savory patisserie products (SAVORY_PATISS)
+    for (int i = 0; i < savory_patiss_count && product_index < MAX_PRODUCTS; i++) {
+        bakery.products[product_index].type = SAVORY_PATISS;
+        bakery.products[product_index].freshness = 100;
+        bakery.products[product_index].x = display_tables[5].x + 30 + (i % 3) * 40;
+        bakery.products[product_index].y = display_tables[5].y + 20 + (i / 3) * 30;
+        product_index++;
+    }
+
+    // Draw all active products
     for (int i = 0; i < MAX_PRODUCTS; i++) {
         if (bakery.products[i].freshness > 0) {
-            products_per_type[bakery.products[i].type]++;
-        }
-    }
-    
-    // Draw products with organized positioning
-    for (int t = 0; t < PRODUCT_TYPES; t++) {
-        Table table = display_tables[t];
-        int products_on_table = 0;
-        
-        for (int i = 0; i < MAX_PRODUCTS; i++) {
-            if (bakery.products[i].freshness > 0 && bakery.products[i].type == t) {
-                // Calculate grid position if multiple products on same table
-                int max_per_row = 3;
-                float x_spacing = table.width / (max_per_row + 1);
-                float y_spacing = table.height / 2;
-                
-                if (products_per_type[t] > max_per_row) {
-                    // Grid layout for crowded tables
-                    int row = products_on_table / max_per_row;
-                    int col = products_on_table % max_per_row;
-                    bakery.products[i].x = table.x + (col + 1) * x_spacing;
-                    bakery.products[i].y = table.y + (row + 1) * y_spacing/2;
-                } else {
-                    // Center items when few products
-                    bakery.products[i].x = table.x + table.width/2;
-                    bakery.products[i].y = table.y + table.height/2;
-                }
-                
-                // Draw the product
-                drawProduct(bakery.products[i].x, bakery.products[i].y, t);
-                
-                // Draw freshness indicator
-                glColor3f(0.3f, 0.3f, 0.3f);
-                glBegin(GL_LINE_LOOP);
-                glVertex2f(bakery.products[i].x - 8, bakery.products[i].y + 12);
-                glVertex2f(bakery.products[i].x + 8, bakery.products[i].y + 12);
-                glVertex2f(bakery.products[i].x + 8, bakery.products[i].y + 14);
-                glVertex2f(bakery.products[i].x - 8, bakery.products[i].y + 14);
-                glEnd();
-                
-                // Freshness level (green -> yellow -> red)
-                float freshness = bakery.products[i].freshness/100.0f;
-                if (freshness > 0.6f) {
-                    glColor3f(0.0f, 1.0f, 0.0f);  // Green
-                } else if (freshness > 0.3f) {
-                    glColor3f(1.0f, 1.0f, 0.0f);  // Yellow
-                } else {
-                    glColor3f(1.0f, 0.0f, 0.0f);  // Red
-                }
-                
-                glBegin(GL_QUADS);
-                glVertex2f(bakery.products[i].x - 7, bakery.products[i].y + 13);
-                glVertex2f(bakery.products[i].x - 7 + freshness*14, 
-                          bakery.products[i].y + 13);
-                glVertex2f(bakery.products[i].x - 7 + freshness*14, 
-                          bakery.products[i].y + 14);
-                glVertex2f(bakery.products[i].x - 7, bakery.products[i].y + 14);
-                glEnd();
-                
-                products_on_table++;
+            drawProduct(bakery.products[i].x, bakery.products[i].y, bakery.products[i].type);
+            
+            // Draw freshness indicator
+            float freshness = bakery.products[i].freshness / 100.0f;
+            glColor3f(0.3f, 0.3f, 0.3f);
+            glBegin(GL_LINE_LOOP);
+            glVertex2f(bakery.products[i].x - 8, bakery.products[i].y + 12);
+            glVertex2f(bakery.products[i].x + 8, bakery.products[i].y + 12);
+            glVertex2f(bakery.products[i].x + 8, bakery.products[i].y + 14);
+            glVertex2f(bakery.products[i].x - 8, bakery.products[i].y + 14);
+            glEnd();
+            
+            if (freshness > 0.6f) {
+                glColor3f(0.0f, 1.0f, 0.0f);  // Green for fresh
+            } else if (freshness > 0.3f) {
+                glColor3f(1.0f, 1.0f, 0.0f);  // Yellow for medium freshness
+            } else {
+                glColor3f(1.0f, 0.0f, 0.0f); // Red for about to expire
             }
+            
+            glBegin(GL_QUADS);
+            glVertex2f(bakery.products[i].x - 7, bakery.products[i].y + 13);
+            glVertex2f(bakery.products[i].x - 7 + freshness*14, bakery.products[i].y + 13);
+            glVertex2f(bakery.products[i].x - 7 + freshness*14, bakery.products[i].y + 14);
+            glVertex2f(bakery.products[i].x - 7, bakery.products[i].y + 14);
+            glEnd();
         }
     }
 }
-
-void drawProduct(float x, float y, int type) {
-    switch(type) {
-        case BREAD:
-            glColor3f(0.85f, 0.75f, 0.55f); // Bread color
-            glBegin(GL_POLYGON);
-            for (int i = 0; i < 360; i += 20) {
-                float angle = i * 3.14159f / 180.0f;
-                glVertex2f(x + cos(angle) * 12, y + sin(angle) * 8);
-            }
-            glEnd();
-            // Bread cuts
-            glColor3f(0.7f, 0.6f, 0.4f);
-            glBegin(GL_LINES);
-            glVertex2f(x - 8, y - 3);
-            glVertex2f(x - 8, y + 3);
-            glVertex2f(x, y - 4);
-            glVertex2f(x, y + 4);
-            glVertex2f(x + 8, y - 3);
-            glVertex2f(x + 8, y + 3);
-            glEnd();
-            break;
-            
-        case CAKE:
-            glColor3f(0.9f, 0.8f, 0.7f); // Cake base
-            glBegin(GL_POLYGON);
-            for (int i = 0; i < 360; i += 20) {
-                float angle = i * 3.14159f / 180.0f;
-                glVertex2f(x + cos(angle) * 15, y + sin(angle) * 10);
-            }
-            glEnd();
-            // Icing
-            glColor3f(0.95f, 0.8f, 0.9f);
-            glBegin(GL_POLYGON);
-            for (int i = 0; i < 360; i += 20) {
-                float angle = i * 3.14159f / 180.0f;
-                glVertex2f(x + cos(angle) * 12, y + 5 + sin(angle) * 5);
-            }
-            glEnd();
-            break;
-            
-        case SANDWICH:
-            // Bread
-            glColor3f(0.9f, 0.8f, 0.6f);
-            glBegin(GL_QUADS);
-            glVertex2f(x - 15, y - 5);
-            glVertex2f(x + 15, y - 5);
-            glVertex2f(x + 15, y + 5);
-            glVertex2f(x - 15, y + 5);
-            glEnd();
-            // Filling
-            glColor3f(0.8f, 0.6f, 0.4f);
-            glBegin(GL_QUADS);
-            glVertex2f(x - 12, y - 3);
-            glVertex2f(x + 12, y - 3);
-            glVertex2f(x + 12, y + 3);
-            glVertex2f(x - 12, y + 3);
-            glEnd();
-            break;
-            
-        case SWEET:
-            glColor3f(0.8f, 0.2f, 0.2f); // Red sweet
-            glBegin(GL_POLYGON);
-            for (int i = 0; i < 360; i += 20) {
-                float angle = i * 3.14159f / 180.0f;
-                glVertex2f(x + cos(angle) * 10, y + sin(angle) * 10);
-            }
-            glEnd();
-            // Decoration
-            glColor3f(1.0f, 1.0f, 1.0f);
-            glBegin(GL_LINES);
-            for (int i = 0; i < 360; i += 90) {
-                float angle = i * 3.14159f / 180.0f;
-                glVertex2f(x, y);
-                glVertex2f(x + cos(angle) * 8, y + sin(angle) * 8);
-            }
-            glEnd();
-            break;
-            
-        case PATISSERIE:
-            // Base
-            glColor3f(0.7f, 0.5f, 0.3f);
-            glBegin(GL_POLYGON);
-            for (int i = 0; i < 360; i += 20) {
-                float angle = i * 3.14159f / 180.0f;
-                glVertex2f(x + cos(angle) * 12, y + sin(angle) * 8);
-            }
-            glEnd();
-            // Topping
-            glColor3f(0.9f, 0.7f, 0.5f);
-            glBegin(GL_POLYGON);
-            for (int i = 0; i < 360; i += 20) {
-                float angle = i * 3.14159f / 180.0f;
-                glVertex2f(x + cos(angle) * 8, y + 5 + sin(angle) * 5);
-            }
-            glEnd();
-            break;
-    }
-}
-
 void drawCustomer(float x, float y, int mood) {
     // Head
     switch(mood) {
@@ -1277,78 +1349,123 @@ void drawCustomers() {
 }
 
 
-
-
-
-
-
 void drawResources() {
-    const char* resource_names[] = {"Wheat", "Yeast", "Butter", "Milk", "Sugar/Salt", "Sweet Items", "Cheese", "Salami"};
+    const char* resource_names[] = {"Wheat", "Yeast", "Butter", "Milk", "Sugar", "Salt", "Sweet Items", "Cheese", "Salami"};
     
-    glColor3f(0.0f, 0.0f, 0.0f);
-    drawText(20, 750, "Resources:");
-    
-    for (int i = 0; i < 8; i++) {
+    // Get current values from shared memory
+    float resources[9];
+    resources[0] = modify_shared_int(sem_wheat_id, shm_wheat_ptr, 0) / (float)config.wheat_amount_max;
+    resources[1] = modify_shared_int(sem_yeast_id, shm_yeast_ptr, 0) / (float)config.yeast_amount_max;
+    resources[2] = modify_shared_int(sem_butter_id, shm_butter_ptr, 0) / (float)config.butter_amount_max;
+    resources[3] = modify_shared_int(sem_milk_id, shm_milk_ptr, 0) / (float)config.milk_amount_max;
+    resources[4] = modify_shared_int(sem_sugar_id, shm_sugar_ptr, 0) / (float)config.sugar_amount_max;
+    resources[5] = modify_shared_int(sem_salt_id, shm_salt_ptr, 0) / (float)config.salt_amount_max;
+    resources[6] = modify_shared_int(sem_sweet_items_id, shm_sweet_items_ptr, 0) / (float)config.sweet_items_amount_max;
+    resources[7] = modify_shared_int(sem_cheese_id, shm_cheese_ptr, 0) / (float)config.cheese_amount_max;
+    resources[8] = modify_shared_int(sem_salami_id, shm_salami_ptr, 0) / (float)config.salami_amount_max;
+
+    // Display resources horizontally at the top
+    float x_start = 20.0f; // Starting x position
+    float y_position = 770.0f; // Shifted y position for resource names
+    float spacing = 130.0f; // Spacing between resource displays
+
+    for (int i = 0; i < 9; i++) {
         char buffer[100];
-        sprintf(buffer, "%s: %.1f", resource_names[i], bakery.resources[i]);
-        drawText(20, 720 - i*25, buffer);
+        float current = resources[i] * ((i == 0) ? config.wheat_amount_max : 
+                                      (i == 1) ? config.yeast_amount_max :
+                                      (i == 2) ? config.butter_amount_max :
+                                      (i == 3) ? config.milk_amount_max :
+                                      (i == 4) ? config.sugar_amount_max :
+                                      (i == 5) ? config.salt_amount_max :
+                                      (i == 6) ? config.sweet_items_amount_max :
+                                      (i == 7) ? config.cheese_amount_max : config.salami_amount_max);
         
+        float max = (i == 0) ? config.wheat_amount_max : 
+                   (i == 1) ? config.yeast_amount_max :
+                   (i == 2) ? config.butter_amount_max :
+                   (i == 3) ? config.milk_amount_max :
+                   (i == 4) ? config.sugar_amount_max :
+                   (i == 5) ? config.salt_amount_max :
+                   (i == 6) ? config.sweet_items_amount_max :
+                   (i == 7) ? config.cheese_amount_max : config.salami_amount_max;
+        
+        sprintf(buffer, "%.1f/%.1f", current, max);
+
+        // Draw resource name in bold
+        glColor3f(0.0f, 0.0f, 0.0f);
+        glRasterPos2f(x_start + i * spacing, y_position);
+        int len = (int)strlen(resource_names[i]);
+        for (int j = 0; j < len; j++) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, resource_names[i][j]); // Larger font for bold effect
+        }
+
+        // Draw resource value under the name with larger text
+        glRasterPos2f(x_start + i * spacing + 10, y_position - 15);
+        len = (int)strlen(buffer);
+        for (int j = 0; j < len; j++) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, buffer[j]); // Larger font
+        }
+        
+        // Draw resource bar
         glColor3f(0.8f, 0.8f, 0.8f);
         glBegin(GL_QUADS);
-        glVertex2f(150, 715 - i*25);
-        glVertex2f(250, 715 - i*25);
-        glVertex2f(250, 705 - i*25);
-        glVertex2f(150, 705 - i*25);
+        glVertex2f(x_start + i * spacing, y_position - 30);
+        glVertex2f(x_start + i * spacing + 100, y_position - 30);
+        glVertex2f(x_start + i * spacing + 100, y_position - 40);
+        glVertex2f(x_start + i * spacing, y_position - 40);
         glEnd();
         
-        if (bakery.resources[i] > 0.3f) {
+        if (resources[i] > 0.3f) {
             glColor3f(0.2f, 0.8f, 0.2f);
-        } else if (bakery.resources[i] > 0.1f) {
+        } else if (resources[i] > 0.1f) {
             glColor3f(0.8f, 0.8f, 0.2f);
         } else {
             glColor3f(0.8f, 0.2f, 0.2f);
         }
+        
         glBegin(GL_QUADS);
-        glVertex2f(150, 715 - i*25);
-        glVertex2f(150 + bakery.resources[i] * 100, 715 - i*25);
-        glVertex2f(150 + bakery.resources[i] * 100, 705 - i*25);
-        glVertex2f(150, 705 - i*25);
+        glVertex2f(x_start + i * spacing, y_position - 30);
+        glVertex2f(x_start + i * spacing + resources[i] * 100, y_position - 30);
+        glVertex2f(x_start + i * spacing + resources[i] * 100, y_position - 40);
+        glVertex2f(x_start + i * spacing, y_position - 40);
         glEnd();
         
         glColor3f(0.0f, 0.0f, 0.0f);
         glBegin(GL_LINE_LOOP);
-        glVertex2f(150, 715 - i*25);
-        glVertex2f(250, 715 - i*25);
-        glVertex2f(250, 705 - i*25);
-        glVertex2f(150, 705 - i*25);
+        glVertex2f(x_start + i * spacing, y_position - 30);
+        glVertex2f(x_start + i * spacing + 100, y_position - 30);
+        glVertex2f(x_start + i * spacing + 100, y_position - 40);
+        glVertex2f(x_start + i * spacing, y_position - 40);
         glEnd();
     }
 }
+
 
 void drawStatus() {
     char buffer[100];
     
     glColor3f(0.0f, 0.0f, 0.0f);
     sprintf(buffer, "Profit: $%.2f", bakery.profit);
-    drawText(1000, 750, buffer);
+    drawText(50, 460, buffer);
     
     sprintf(buffer, "Served: %d", bakery.customers_served);
-    drawText(1000, 725, buffer);
+    drawText(50, 435, buffer);
     
     sprintf(buffer, "Frustrated: %d", bakery.customers_frustrated);
-    drawText(1000, 700, buffer);
+    drawText(50, 410, buffer);
     
     sprintf(buffer, "Complaints: %d", bakery.customers_complained);
-    drawText(1000, 675, buffer);
+    drawText(50, 385, buffer);
     
     if (bakery.simulation_running) {
         glColor3f(0.0f, 0.8f, 0.0f);
-        drawText(1000, 650, "Status: Running");
+        drawText(50, 360, "Status: Running");
     } else {
         glColor3f(0.8f, 0.0f, 0.0f);
-        drawText(1000, 650, "Status: Stopped");
+        drawText(50, 360, "Status: Stopped");
     }
-}
+    }
+
 
 void drawText(float x, float y, const char* string) {
     if (!string) return;
@@ -1358,4 +1475,128 @@ void drawText(float x, float y, const char* string) {
     for (int i = 0; i < len; i++) {
         glutBitmapCharacter(GLUT_BITMAP_9_BY_15, string[i]);
     }
+}
+
+void drawPreparationProgress(){
+    // Array of shared memory pointers and corresponding semaphores
+    char *shm_ptrs[] = {shm_paste_ptr, shm_cake_paste_ptr, shm_sweets_paste_ptr, shm_sweet_patiss_paste_ptr, shm_savory_patiss_paste_ptr};
+    int sem_ids[] = {sem_paste_id, sem_cake_paste_id, sem_sweets_paste_id, sem_sweet_patiss_paste_id, sem_savory_patiss_paste_id};
+
+    // Iterate over each preparation table
+    for (int i = 0; i < 5; i++) {
+        // Get the current value from shared memory
+        int value = modify_shared_int(sem_ids[i], shm_ptrs[i], 0);
+
+        // Check if value is null, make it zero
+        if (value < 0) {
+            value = 0;
+        }
+
+        // Find the center of the corresponding preparation table
+        float center_x = prep_tables[i].x + prep_tables[i].width / 2;
+        float center_y = prep_tables[i].y + prep_tables[i].height / 2;
+
+        // Convert the value to a string
+        char buffer[20];
+        sprintf(buffer, "%d", value);
+
+        // Display the value at the center of the table
+        glColor3f(0.0f, 0.0f, 0.0f); // Black text
+        drawText(center_x - 10, center_y, buffer); // Adjust x slightly for centering
+    }
+}
+void drawFinalProducts(){
+    // Draw bread categories
+    for (int i = 0; i < bakery.bread_categories; i++) {
+        int value = modify_shared_int(bread_catagories_sem_id[i], bread_catagories_shm_ptr[i], 0);
+        if (value < 0) value = 0; // Ensure value is non-negative
+
+        float center_x = display_tables[0].x + 30 + (i % 3) * 40;
+        float center_y = display_tables[0].y + 20 + (i / 3) * 30;
+
+        char buffer[20];
+        sprintf(buffer, "%d", value);
+
+        glColor3f(0.0f, 0.0f, 0.0f); // Black text
+        drawText(center_x, center_y, buffer);
+    }
+
+    // Draw sandwich types
+    for (int i = 0; i < bakery.sandwich_types; i++) {
+        int value = modify_shared_int(sandwiches_sem_id[i], sandwiches_shm_ptr[i], 0);
+        if (value < 0) value = 0;
+
+        float center_x = display_tables[2].x + 30 + (i % 3) * 40;
+        float center_y = display_tables[2].y + 20 + (i / 3) * 30;
+
+        char buffer[20];
+        sprintf(buffer, "%d", value);
+
+        glColor3f(0.0f, 0.0f, 0.0f);
+        drawText(center_x, center_y, buffer);
+    }
+
+    // Draw cake flavors
+    for (int i = 0; i < bakery.cake_flavors; i++) {
+        int value = modify_shared_int(cake_flavors_sem_id[i], cake_flavors_shm_ptr[i], 0);
+        if (value < 0) value = 0;
+
+        float center_x = display_tables[1].x + 30 + (i % 3) * 40;
+        float center_y = display_tables[1].y + 20 + (i / 3) * 30;
+
+        char buffer[20];
+        sprintf(buffer, "%d", value);
+
+        glColor3f(0.0f, 0.0f, 0.0f);
+        drawText(center_x, center_y, buffer);
+    }
+
+    // Draw sweets flavors
+    for (int i = 0; i < bakery.sweets_flavors; i++) {
+        int value = modify_shared_int(sweets_flavors_sem_id[i], sweets_flavors_shm_ptr[i], 0);
+        if (value < 0) value = 0;
+
+        float center_x = display_tables[3].x + 30 + (i % 3) * 40;
+        float center_y = display_tables[3].y + 20 + (i / 3) * 30;
+
+        char buffer[20];
+        sprintf(buffer, "%d", value);
+
+        glColor3f(0.0f, 0.0f, 0.0f);
+        drawText(center_x, center_y, buffer);
+    }
+
+    // Draw sweet patisseries
+    for (int i = 0; i < bakery.patisserie_types / 2; i++) {
+        int value = modify_shared_int(sweet_patisseries_sem_id[i], sweet_patisseries_shm_ptr[i], 0);
+        if (value < 0) value = 0;
+
+        float center_x = display_tables[4].x + 30 + (i % 3) * 40;
+        float center_y = display_tables[4].y + 20 + (i / 3) * 30;
+
+        char buffer[20];
+        sprintf(buffer, "%d", value);
+
+        glColor3f(0.0f, 0.0f, 0.0f);
+        drawText(center_x, center_y, buffer);
+    }
+
+    // Draw savory patisseries
+    for (int i = 0; i < bakery.patisserie_types / 2; i++) {
+        int value = modify_shared_int(savory_patisseries_sem_id[i], savory_patisseries_shm_ptr[i], 0);
+        if (value < 0) value = 0;
+
+        float center_x = display_tables[5].x + 30 + (i % 3) * 40;
+        float center_y = display_tables[5].y + 20 + (i / 3) * 30;
+
+        char buffer[20];
+        sprintf(buffer, "%d", value);
+
+        glColor3f(0.0f, 0.0f, 0.0f);
+        drawText(center_x, center_y, buffer);
+    }
+    
+
+
+    
 }
