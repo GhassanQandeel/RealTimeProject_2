@@ -44,8 +44,10 @@
 
 // Message Queue related info
 int mid;
+int profit = 0;
 MESSAGE msg_rcv;
 MESSAGE requested_missing_items;
+MESSAGE msg_payment;
 
 
 
@@ -338,26 +340,101 @@ int main(int argc, char **argv)
         fork_suppliers(suppliers_pids);
         fork_bakers(bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
         fork_opengl_process();
-
-        while (1) {
-            if (msgrcv(mid, &msg_rcv, sizeof(msg_rcv.buffer), 2, 0) == -1) { // -1 is the equivalent to requsting an item
-            perror("msgrcv");
-            continue;
-            }
-            printf("----------------------------------------------------------------------------------\n");
-            printf("Customer%d is %s, bakery noted\n",msg_rcv.msg_fm, msg_rcv.buffer); // Print the received message
-            if (strcmp(msg_rcv.buffer, "Frustrated") == 0) {
-                number_of_frustrated_customers++;
-            } else if (strcmp(msg_rcv.buffer, "Complained") == 0) {
-                nummber_of_complained_customers++;
-            } else if (strcmp(msg_rcv.buffer, "Requested Missing Items") == 0) {
-                number_of_missing_items_customers++;
-            }
-            // Print the number of customers
-            printf("Number of frustrated customers: %d\n", number_of_frustrated_customers);
-            printf("Number of complained customers: %d\n", nummber_of_complained_customers);
-            printf("Number of customers requested missing items: %d\n", number_of_missing_items_customers);
+        // time started the simulation
+        time_t start_time = time(NULL);
+        // time_t current_time;
+        time_t current_time;
+    while (1) {
+    // Check exit conditions first to avoid unnecessary message processing
+    current_time = time(NULL);
+    if (difftime(current_time, start_time) >= config.max_time) {
+        printf("Maximum operating time reached.\n");
+        break;
+    }
+    
+    if (number_of_frustrated_customers >= config.frustrated_customers_number_threshold ||
+        nummber_of_complained_customers >= config.complained_customers_number_threshold ||
+        number_of_missing_items_customers >= config.requested_missing_items_customers_number_threshold) {
+        printf("Customer complaint threshold reached.\n");
+        break;
+    }
+    
+    if (profit >= config.daily_profit_threshold) {
+        printf("Daily profit target achieved.\n");
+        break;
+    }
+    
+    // Non-blocking check for status messages
+    ssize_t status_received = msgrcv(mid, &msg_rcv, sizeof(msg_rcv.buffer), 
+                                     config.customer_number + 1, IPC_NOWAIT);
+    
+    if (status_received > 0) {
+        // Ensure null-termination of received message
+        msg_rcv.buffer[sizeof(msg_rcv.buffer) - 1] = '\0';
+        
+        printf("------------------------------------------------------------\n");
+        printf("Customer%d is %s, bakery noted\n", msg_rcv.msg_fm, msg_rcv.buffer);
+        
+        if (strcmp(msg_rcv.buffer, "Frustrated") == 0) {
+            number_of_frustrated_customers++;
+        } else if (strcmp(msg_rcv.buffer, "Complained") == 0) {
+            nummber_of_complained_customers++;
+        } else if (strcmp(msg_rcv.buffer, "Requested Missing Items") == 0) {
+            number_of_missing_items_customers++;
         }
+        
+        printf("Number of frustrated customers: %d\n", number_of_frustrated_customers);
+        printf("Number of complained customers: %d\n", nummber_of_complained_customers);
+        printf("Number of customers requested missing items: %d\n", number_of_missing_items_customers);
+    } else if (status_received == -1 && errno != ENOMSG) {
+        perror("msgrcv (status)");
+        // Consider whether to break or continue based on error type
+        if (errno == EIDRM || errno == EINVAL) {
+            continue;  // Queue was deleted or invalid, exit
+        }
+    }
+
+    // Non-blocking check for payment messages
+    ssize_t payment_received = msgrcv(mid, &msg_payment, sizeof(msg_payment.buffer),
+                                    config.customer_number + 2, IPC_NOWAIT);
+    
+    if (payment_received > 0) {
+        // Ensure null-termination of received message
+        msg_payment.buffer[sizeof(msg_payment.buffer) - 1] = '\0';
+        
+        printf("------------------------------------------------------------\n");
+        printf("Customer%d payed: %s\n", msg_payment.msg_fm, msg_payment.buffer);
+        
+        // Validate payment amount
+        char* endptr;
+        long payment_amount = strtol(msg_payment.buffer, &endptr, 10);
+        
+        if (endptr != msg_payment.buffer && *endptr == '\0' && payment_amount >= 0) {
+            if (status_received > 0) {
+                if (strcmp(msg_rcv.buffer, "Happy") != 0) {
+                    profit += payment_amount;
+                } else if (strcmp(msg_rcv.buffer, "Complained") == 0) {
+                    profit -= payment_amount;
+                }
+            } else {
+                // Default case if no status was received with this payment
+                profit += payment_amount;
+            }
+        } else {
+            fprintf(stderr, "Invalid payment amount: %s\n", msg_payment.buffer);
+        }
+    } else if (payment_received == -1 && errno != ENOMSG) {
+        perror("msgrcv (payment)");
+        if (errno == EIDRM || errno == EINVAL) {
+            continue;
+        }
+    }
+
+    // Small delay to prevent busy waiting (adjust as needed)
+    usleep(100000); // 100ms
+    }
+
+// Cleanup code would go here if needed
 
         
 
