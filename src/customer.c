@@ -8,6 +8,7 @@
 #include <fcntl.h>   
 #include <sys/stat.h> 
 #include <unistd.h>   
+#include <signal.h>
 
 int customer_id = 0; // Global variable to store customer ID
 int min_time_wait_customer;

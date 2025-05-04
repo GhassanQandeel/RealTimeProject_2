@@ -43,6 +43,14 @@ char *shm_savory_patiss_paste_ptr;
 
 int sem_savory_patiss_paste_id;
 
+int *sweet_patisseries_shm_id;
+char **sweet_patisseries_shm_ptr;
+int *sweet_patisseries_sem_id;
+
+int *savory_patisseries_shm_id;
+char **savory_patisseries_shm_ptr;
+int *savory_patisseries_sem_id;
+
 
 char config_file_name[30];
 Config config;
@@ -61,7 +69,6 @@ void print_array(const int array[], int size) {
 
 void sigusr1_handler(int signum) {
     printf("Received SIGUSR1 signal. Exiting...\n");
-    config.simulation_running = 0;
     deattach_all_shm();
     detach_shm_segments(sweet_patisseries_shm_ptr, config.sweet_patisseries_number);
     detach_shm_segments(savory_patisseries_shm_ptr, config.savory_patisseries_number);
@@ -87,15 +94,15 @@ int main(int argc, char **argv) {
 	}
 	
 	
-	// For Sweet Patisseries
-    int sweet_patisseries_shm_id[config.sweet_patisseries_number];
-    int sweet_patisseries_sem_id[config.sweet_patisseries_number];
-    char *sweet_patisseries_shm_ptr[config.sweet_patisseries_number];
+    // Create malloc
+    sweet_patisseries_shm_id = malloc(config.sweet_patisseries_number * sizeof(int));
+    sweet_patisseries_shm_ptr = malloc(config.sweet_patisseries_number * sizeof(char *));
+    sweet_patisseries_sem_id = malloc(config.sweet_patisseries_number * sizeof(int));
 
-    // For Savory Patisseries
-    int savory_patisseries_shm_id[config.savory_patisseries_number];
-    int savory_patisseries_sem_id[config.savory_patisseries_number];
-    char *savory_patisseries_shm_ptr[config.savory_patisseries_number];
+    // Create malloc 
+    savory_patisseries_shm_id = malloc(config.savory_patisseries_number * sizeof(int));
+    savory_patisseries_shm_ptr = malloc(config.savory_patisseries_number * sizeof(char *));
+    savory_patisseries_sem_id = malloc(config.savory_patisseries_number * sizeof(int));
 
 
 	

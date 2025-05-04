@@ -6,6 +6,7 @@
 #include <errno.h>
 #include "../include/local.h"
 #include "../include/config.h"
+#include <signal.h>
 
 int mid;
 MESSAGE msg_rcv;
