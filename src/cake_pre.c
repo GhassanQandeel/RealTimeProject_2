@@ -238,27 +238,27 @@ void do_work() {
     
     
     if (modify_shared_int(sem_wheat_id, shm_wheat_ptr, -amount) <= 0) {
-        sleep(200);
+        sleep(1);
     }
     
     // Yeast check
     if (modify_shared_int(sem_yeast_id, shm_yeast_ptr, -amount) <= 0) {
-        sleep(200);
+        sleep(1);
     }
     
     // Butter check
     if (modify_shared_int(sem_butter_id, shm_butter_ptr, -amount) <= 0) {
-        sleep(200);
+        sleep(3);
     }
     
     // Milk check
     if (modify_shared_int(sem_milk_id, shm_milk_ptr, -amount) <= 0) {
-        sleep(200);
+        sleep(2);
     }
     
     // Salt check
     if (modify_shared_int(sem_sugar_id, shm_sugar_ptr, -amount) <= 0) {
-        sleep(200);
+        sleep(1);
     }
 
 

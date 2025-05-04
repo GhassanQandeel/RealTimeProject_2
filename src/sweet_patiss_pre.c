@@ -223,11 +223,11 @@ void do_work() {
     
     
     if (modify_shared_int(sem_sugar_id, shm_sugar_ptr, -amount) <= 0) {
-        sleep(200);
+        sleep(3);
     }
     
     if (modify_shared_int(sem_sweet_items_id, shm_sweet_items_ptr, -amount) <= 0) {
-        sleep(200);
+        sleep(3);
     }
     
     

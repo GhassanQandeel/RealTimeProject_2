@@ -21,7 +21,7 @@ void deattach_shm(int shmid, char *ptr);
 void deattach_all_shm();
 
 int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add);
-void do_work(int* cake_flavors_sem_id , char** cake_flavors_shm_ptr,int* sweets_flavors_sem_id,char** sweets_flavors_shm_ptr );
+void do_work();
 
 void decode_shm_sem_message(const char* message, int* shm_ids, int* sem_ids, int max_count);
 void attach_shm_segments(int* shm_ids, char** shm_ptrs, int count);
@@ -69,7 +69,7 @@ void print_array(const int array[], int size) {
 }
 
 void sigusr1_handler(int signum) {
-    printf("Received SIGUSR1 signal. Exiting...\n");
+    printf("Received SIGUSR1 signal. Exiting..Sweet Cake Bake.\n");
     deattach_all_shm();
     detach_shm_segments(cake_flavors_shm_ptr, config.cake_flavors_number);
     detach_shm_segments(sweets_flavors_shm_ptr, config.sweets_flavors_number);
@@ -84,13 +84,13 @@ void sigusr1_handler(int signum) {
 }
 int main(int argc, char **argv) {
     // catch SIGUSR1 signal
-    signal(SIGUSR1, sigusr1_handler);
     	strcpy(config_file_name, argv[1]);
 	
     	if (argc < 2) {
 	       fprintf(stderr, "Usage: %s <config_file>\n", argv[0]);
 	        return EXIT_FAILURE;
 	    }
+    signal(SIGUSR1, sigusr1_handler);
 
 	
 	if (load_config(config_file_name, &config) == 0) {
@@ -124,23 +124,17 @@ int main(int argc, char **argv) {
     decode_shm_sem_message(argv[4], cake_flavors_shm_id, cake_flavors_sem_id, config.cake_flavors_number);
     decode_shm_sem_message(argv[5], sweets_flavors_shm_id, sweets_flavors_sem_id, config.sweets_flavors_number);
 
+
     attach_all_shm();
     attach_shm_segments(cake_flavors_sem_id,cake_flavors_shm_ptr, config.cake_flavors_number);
     attach_shm_segments(sweets_flavors_shm_id,sweets_flavors_shm_ptr, config.sweets_flavors_number);
     
-    /*
-    printf("CAKE SHM :\n");
-    print_array(cake_flavors_shm_id,config.cake_flavors_number);
-    printf("CAKE sem :\n");
-    print_array(cake_flavors_sem_id,config.cake_flavors_number);
-    printf("SWEETS SHM :\n");
-    print_array(sweets_flavors_shm_id,config.sweets_flavors_number);
-    printf("SWEETS sem :\n");
-    print_array(sweets_flavors_sem_id,config.sweets_flavors_number);
-    */
+
+
+  
 
     while(1){
-        do_work(cake_flavors_sem_id ,cake_flavors_shm_ptr,sweets_flavors_sem_id,sweets_flavors_shm_ptr );
+        do_work();
     }
 
     printf("From sweet cake :Current Process ID: %d\n", getpid());
@@ -231,8 +225,9 @@ void deattach_all_shm() {
 }
 int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
     static int read_count = 0; // Track number of readers inside this function
-    printf("[DEBUG] File path:  paste \n");
-
+    printf("[DEBUG] File path:  sweet_cake_bake \n");
+    if(cake_flavors_sem_id[0]==sem_id)
+        {printf("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS \n");}
     printf("[DEBUG] Starting modify_shared_int()...\n");
 
     // --- Start Reader-Writer synchronization (like your reader) ---
@@ -293,29 +288,27 @@ int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
 
 }
 
-void do_work(int* cake_flavors_sem_id , char** cake_flavors_shm_ptr,int* sweets_flavors_sem_id,char** sweets_flavors_shm_ptr )
+void do_work()
 {
     //random time to  achive the code 
-    int processing_time = (rand() % 6) + 1;
+    int processing_time = (rand() % 4) + 1;
     
     //random amount to take (between 1-3 units)
     int amount = (rand() % 3) + 1;
     
     
     if (modify_shared_int(sem_sweets_paste_id, shm_sweets_paste_ptr, -amount) <= 0) {
-        sleep(3);
+        printf("\n");
     }
     
     // Yeast check
     if (modify_shared_int(sem_cake_paste_id, shm_cake_paste_ptr, -amount) <= 0) {
-        sleep(3);
+        printf("\n");
     }
    
     
     sleep(processing_time);
 
-    // Simulate processing time
-    sleep(processing_time);
     for (int i = 0; i < config.cake_flavors_number; i++)
     {
         int paste_int=modify_shared_int(cake_flavors_sem_id[i], cake_flavors_shm_ptr[i], amount*2);

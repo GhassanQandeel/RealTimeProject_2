@@ -216,7 +216,7 @@ void do_work() {
     
     
     if (modify_shared_int(sem_salt_id, shm_salt_ptr, -amount) <= 0) {
-        sleep(200);
+        sleep(3);
     }
  
     // Butter check

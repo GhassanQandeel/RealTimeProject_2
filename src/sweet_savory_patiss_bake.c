@@ -20,7 +20,7 @@ void attach_all_shm();
 void deattach_shm(int shmid, char *ptr);
 void deattach_all_shm();
 
-void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add);
+int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add);
 void decode_shm_sem_message(const char* message, int* shm_ids, int* sem_ids, int max_count);
 void attach_shm_segments(int* shm_ids, char** shm_ptrs, int count);
 void detach_shm_segments(char** shm_ptrs, int count);
@@ -30,7 +30,7 @@ union semun {
     unsigned short *array;
 };
 
-
+void do_work();
 int shm_sweet_patiss_paste_id;
 char *shm_sweet_patiss_paste_ptr;
 
@@ -124,15 +124,10 @@ int main(int argc, char **argv) {
     attach_shm_segments(savory_patisseries_shm_id,savory_patisseries_shm_ptr, config.savory_patisseries_number);
     
     
-    printf("SWEET PATISS BAKE SHM :\n");
-    print_array(sweet_patisseries_shm_id,config.sweet_patisseries_number);
-    printf("SWEET PATISS BAKE sem :\n");
-    print_array(sweet_patisseries_sem_id,config.sweet_patisseries_number);
-    printf("SAVORY PATISS BAKE SHM :\n");
-    print_array(savory_patisseries_shm_id,config.savory_patisseries_number);
-    printf("SAVORY PATISS BAKE sem :\n");
-    print_array(savory_patisseries_sem_id,config.savory_patisseries_number);
-
+    while(1){
+        do_work();
+        sleep(1);
+    }
     printf("From patiss bake :Current Process ID: %d\n", getpid());
     return 0;
 }
@@ -221,60 +216,54 @@ void deattach_all_shm() {
     deattach_shm(shm_savory_patiss_paste_id, shm_savory_patiss_paste_ptr); 
 
 }
-void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
+int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
     static int read_count = 0; // Track number of readers inside this function
-
-    printf("[DEBUG] File path: sandwiches \n");
+    printf("[DEBUG] File path:  paste \n");
     printf("[DEBUG] Starting modify_shared_int()...\n");
 
     // --- Start Reader-Writer synchronization (like your reader) ---
 
     // Acquire mutex to protect read_count
     struct sembuf op_wait_mutex = {MUTEX, -1, SEM_UNDO};
-    printf("[DEBUG] Locking MUTEX to protect read_count\n");
     semop(sem_id, &op_wait_mutex, 1);
 
     read_count++;
-    printf("[DEBUG] Incremented read_count: %d\n", read_count);
+    
     if (read_count == 1) {
         // First reader locks write lock
         struct sembuf op_wait_write_lock = {WRITE_LOCK, -1, SEM_UNDO};
-        printf("[DEBUG] First reader locking WRITE_LOCK\n");
+        
         semop(sem_id, &op_wait_write_lock, 1);
     }
 
     // Release mutex
     struct sembuf op_release_mutex = {MUTEX, 1, SEM_UNDO};
-    printf("[DEBUG] Releasing MUTEX\n");
+    
     semop(sem_id, &op_release_mutex, 1);
 
     // --- Critical Section: Reading value ---
     int current_value = *((int *)shm_ptr);  // Read int from shared memory
     printf("[DEBUG] Read value from shared memory: %d\n", current_value);
-
     // --- End Reading ---
 
     // Acquire mutex again to safely modify read_count
-    printf("[DEBUG] Locking MUTEX again to modify read_count\n");
+    
     semop(sem_id, &op_wait_mutex, 1);
 
     read_count--;
-    printf("[DEBUG] Decremented read_count: %d\n", read_count);
+    
     if (read_count == 0) {
         // Last reader releases write lock
         struct sembuf op_release_write_lock = {WRITE_LOCK, 1, SEM_UNDO};
-        printf("[DEBUG] Last reader releasing WRITE_LOCK\n");
         semop(sem_id, &op_release_write_lock, 1);
     }
 
-    printf("[DEBUG] Releasing MUTEX after modifying read_count\n");
     semop(sem_id, &op_release_mutex, 1);
 
     // --- Now become a Writer to modify shared memory ---
 
     // Acquire write lock
     struct sembuf op_wait_write_lock2 = {WRITE_LOCK, -1, SEM_UNDO};
-    printf("[DEBUG] Locking WRITE_LOCK for writing\n");
     semop(sem_id, &op_wait_write_lock2, 1);
 
     // Modify value
@@ -284,8 +273,48 @@ void modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
 
     // Release write lock
     struct sembuf op_release_write_lock2 = {WRITE_LOCK, 1, SEM_UNDO};
-    printf("[DEBUG] Releasing WRITE_LOCK after writing\n");
     semop(sem_id, &op_release_write_lock2, 1);
-
     printf("[DEBUG] Finished modify_shared_int()\n\n");
+    return current_value;
+
+}
+
+void do_work(){
+      //random time to  achive the code 
+      int processing_time = (rand() % 6) + 1;
+    
+      //random amount to take (between 1-3 units)
+      int amount = (rand() % 3) + 1;
+      
+      
+      if (modify_shared_int(sem_sweet_patiss_paste_id, shm_sweet_patiss_paste_ptr, -amount) <= 0) {
+          sleep(2);
+      }
+
+      if (modify_shared_int(sem_savory_patiss_paste_id, shm_savory_patiss_paste_ptr, -amount) <= 0) {
+        sleep(2);
+    }
+      
+      
+      
+  
+      // Simulate processing time
+      sleep(processing_time);
+  
+  
+  
+      for (int i = 0; i < config.sweet_patisseries_number; i++)
+      {
+        
+       
+        modify_shared_int(sweet_patisseries_sem_id[i], sweet_patisseries_shm_ptr[i], amount*2);
+          
+      
+      }
+      for (int i = 0; i < config.savory_patisseries_number; i++)
+      {
+       
+        modify_shared_int(savory_patisseries_sem_id[i], savory_patisseries_shm_ptr[i], amount*2);
+          
+      }
 }

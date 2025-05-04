@@ -248,12 +248,12 @@ Table baking_tables[3] = {
     {750, 400, 150, 60, "Patiss Baking"}
 };
 Table display_tables[6] = {
-    {10, 100, 200, 80, "Bread"},
-    {250, 100, 200, 80, "Cakes"},
-    {490, 100, 200, 80, "Sandwiches"},
-    {730, 100, 200, 80, "Sweets"},
-    {970, 100, 200, 80, "Sweet Patiss"},
-    {1210, 100, 200, 80, "Savory Patiss"}
+    {10, 100, 150, 60, "Bread"},
+    {180, 100, 150, 60, "Cakes"},
+    {350, 100, 150, 60, "Sandwiches"},
+    {520, 100, 150, 60, "Sweets"},
+    {690, 100, 150, 60, "Sweet Patiss"},
+    {860, 100, 150, 60, "Savory Patiss"}
 };
 
 
@@ -1520,6 +1520,7 @@ void drawFinalProducts(){
         int value = modify_shared_int(bread_catagories_sem_id[i], bread_catagories_shm_ptr[i], 0);
         if (value < 0) value = 0; // Ensure value is non-negative
 
+
         float center_x = display_tables[0].x + 30 + (i % 3) * 40;
         float center_y = display_tables[0].y + 20 + (i / 3) * 30;
 
@@ -1535,6 +1536,7 @@ void drawFinalProducts(){
         int value = modify_shared_int(sandwiches_sem_id[i], sandwiches_shm_ptr[i], 0);
         if (value < 0) value = 0;
 
+
         float center_x = display_tables[2].x + 30 + (i % 3) * 40;
         float center_y = display_tables[2].y + 20 + (i / 3) * 30;
 
@@ -1545,10 +1547,11 @@ void drawFinalProducts(){
         drawText(center_x, center_y, buffer);
     }
 
-    // Draw cake flavors
-    for (int i = 0; i < bakery.cake_flavors; i++) {
-        int value = modify_shared_int(cake_flavors_sem_id[i], cake_flavors_shm_ptr[i], 0);
+     // Draw sandwich types
+     for (int i = 0; i < bakery.sandwich_types; i++) {
+        int value = modify_shared_int(sandwiches_sem_id[i], sandwiches_shm_ptr[i], 0);
         if (value < 0) value = 0;
+
 
         float center_x = display_tables[1].x + 30 + (i % 3) * 40;
         float center_y = display_tables[1].y + 20 + (i / 3) * 30;
@@ -1560,10 +1563,10 @@ void drawFinalProducts(){
         drawText(center_x, center_y, buffer);
     }
 
-    // Draw sweets flavors
-    for (int i = 0; i < bakery.sweets_flavors; i++) {
-        int value = modify_shared_int(sweets_flavors_sem_id[i], sweets_flavors_shm_ptr[i], 0);
-        if (value < 0) value = 0;
+    for (int i = 0; i < bakery.bread_categories; i++) {
+        int value = modify_shared_int(bread_catagories_sem_id[i], bread_catagories_shm_ptr[i], 0);
+        if (value < 0) value = 0; // Ensure value is non-negative
+
 
         float center_x = display_tables[3].x + 30 + (i % 3) * 40;
         float center_y = display_tables[3].y + 20 + (i / 3) * 30;
@@ -1571,7 +1574,7 @@ void drawFinalProducts(){
         char buffer[20];
         sprintf(buffer, "%d", value);
 
-        glColor3f(0.0f, 0.0f, 0.0f);
+        glColor3f(0.0f, 0.0f, 0.0f); // Black text
         drawText(center_x, center_y, buffer);
     }
 
@@ -1579,6 +1582,7 @@ void drawFinalProducts(){
     for (int i = 0; i < bakery.patisserie_types / 2; i++) {
         int value = modify_shared_int(sweet_patisseries_sem_id[i], sweet_patisseries_shm_ptr[i], 0);
         if (value < 0) value = 0;
+
 
         float center_x = display_tables[4].x + 30 + (i % 3) * 40;
         float center_y = display_tables[4].y + 20 + (i / 3) * 30;
@@ -1594,6 +1598,7 @@ void drawFinalProducts(){
     for (int i = 0; i < bakery.patisserie_types / 2; i++) {
         int value = modify_shared_int(savory_patisseries_sem_id[i], savory_patisseries_shm_ptr[i], 0);
         if (value < 0) value = 0;
+
 
         float center_x = display_tables[5].x + 30 + (i % 3) * 40;
         float center_y = display_tables[5].y + 20 + (i / 3) * 30;

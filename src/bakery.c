@@ -335,11 +335,26 @@ int main(int argc, char **argv)
         create_production_items_message();
         //printf("From parent Combined IDs: %s\n", basic_items_message);
         fork_chefs(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids,savory_patiss_team_pids);
+        fork_bakers(bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
+        
+   printf("\n#################################\n");
+   print_array(bakers_pids, config.bakers_number) ;
+   print_array(paste_team_pids, config.bakers_number);
+    print_array(sweet_cake_bake_team_pids, config.bakers_number);
+    print_array(sweet_savory_patiss_bake_team_pids, config.bakers_number);
+printf("\n#################################\n");
         fork_customers(customers_pids,sallers_pids);
         fork_sallers(sallers_pids, customers_pids);
         fork_suppliers(suppliers_pids);
-        fork_bakers(bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
+        
         fork_opengl_process();
+
+
+        
+
+
+
+
         // time started the simulation
         time_t start_time = time(NULL);
         // time_t current_time;
@@ -349,6 +364,8 @@ int main(int argc, char **argv)
     current_time = time(NULL);
     if (difftime(current_time, start_time) >= config.max_time) {
         printf("Maximum operating time reached.\n");
+        kill_teams(chefs_pids, bakers_pids,sallers_pids,suppliers_pids,customers_pids);
+
         break;
     }
     
@@ -356,11 +373,15 @@ int main(int argc, char **argv)
         nummber_of_complained_customers >= config.complained_customers_number_threshold ||
         number_of_missing_items_customers >= config.requested_missing_items_customers_number_threshold) {
         printf("Customer complaint threshold reached.\n");
+        kill_teams(chefs_pids, bakers_pids,sallers_pids,suppliers_pids,customers_pids);
+
         break;
     }
     
     if (profit >= config.daily_profit_threshold) {
         printf("Daily profit target achieved.\n");
+        kill_teams(chefs_pids, bakers_pids,sallers_pids,suppliers_pids,customers_pids);
+
         break;
     }
     
@@ -445,9 +466,8 @@ int main(int argc, char **argv)
    	
         
         
-        sleep(50);
         //Abbas, when go bulid main while loop let check every 20 sec after half config.max_time by timer if there chefs need help or bakers
-        help_chefs_baased_on_quantity(chefs_pids,
+        /*help_chefs_baased_on_quantity(chefs_pids,
             paste_team_pids,
             cake_team_pids,
             sandwishes_team_pids,
@@ -466,7 +486,7 @@ int main(int argc, char **argv)
             cake_flavors_shm_id, cake_flavors_sem_id, cake_flavors_shm_ptr,
             sweets_flavors_shm_id, sweets_flavors_sem_id, sweets_flavors_shm_ptr,
             sweet_patisseries_shm_id, sweet_patisseries_sem_id, sweet_patisseries_shm_ptr,
-            savory_patisseries_shm_id, savory_patisseries_sem_id, savory_patisseries_shm_ptr);
+            savory_patisseries_shm_id, savory_patisseries_sem_id, savory_patisseries_shm_ptr);*/
         cleanup_shm_sem_basic_items();
         cleanup_shm_sem_for_sale(bread_catagories_shm_id,bread_catagories_sem_id,bread_catagories_shm_ptr,
 	        sandwiches_shm_id,sandwiches_sem_id,sandwiches_shm_ptr,
@@ -476,7 +496,6 @@ int main(int argc, char **argv)
 	        savory_patisseries_shm_id,savory_patisseries_sem_id,savory_patisseries_shm_ptr);
 	
 		              
-        kill_teams(chefs_pids, bakers_pids,sallers_pids,suppliers_pids,customers_pids);
         
         
         return 0;
@@ -817,23 +836,22 @@ void kill_teams(pid_t chefs_pids[] , pid_t baker_pids[], pid_t sallers_pids[], p
     }
 
     
-    /*
     
     // Kill bakers processes
     for (int i = 0; i < config.bakers_number; i++) {
         kill_process(baker_pids[i]);
     }
-    /*
+    
     // Kill sallers processes
     for (int i = 0; i < config.sallers_number; i++) {
         kill_process(sallers_pids[i]);
     }
-     */
+     
     // Kill suppliers processes
     for (int i = 0; i < config.suppliers_number; i++) {
         kill_process(suppliers_pids[i]);
     }
-    //kill_process(opengl_pid);
+    kill_process(opengl_pid);
 }
 
 void divde_prepartion_team_members(int chef_number)

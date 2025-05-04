@@ -334,17 +334,17 @@ void do_work(int* bread_catagories_sem_id , char** bread_catagories_shm_ptr,int*
     
     
     if (modify_shared_int(sem_cheese_id, shm_cheese_ptr, -amount) <= 0) {
-        sleep(200);
+        sleep(3);
     }
     
     // Yeast check
     if (modify_shared_int(sem_salami_id, shm_salami_ptr, -amount) <= 0) {
-        sleep(200);
+        sleep(3);
     }
     for (int i = 0; i < config.bread_catagories_number; i++)
     {
         if (modify_shared_int(bread_catagories_sem_id[i], bread_catagories_shm_ptr[i], -amount) <= 0) {
-            sleep(200);
+            sleep(3);
         }
         
     }
