@@ -10,11 +10,9 @@
 #include <time.h>
 
 
-
 #define MUTEX 0       // Controls access to read_count
 #define READ_COUNT 1  // Tracks number of readers
 #define WRITE_LOCK 2  // Ensures exclusive write access
-
 
 
 
@@ -61,9 +59,9 @@ int sem_cheese_id;
 int sem_salami_id;
 
 int main(int argc, char **argv) {
-
+    
     pid_t pid = getpid();
-
+    
     parse_ids(argv[2]);
     
     attach_shm_basic_items();
@@ -279,7 +277,7 @@ void positive_random_updater() {
         }
 
         // Determine value to add (1-10)
-        int value = (rand() % 10) + 1;
+        int value = (rand() % 6) + 1;
         
         // Update all selected memories
         for (int i = 0; i < num_memories; i++) {
@@ -291,7 +289,7 @@ void positive_random_updater() {
         }
 
         // Determine sleep time (1-10 seconds)
-        int sleep_time = (rand() % 10) + 1;
+        int sleep_time = (rand() % 5) + 1;
         sleep(sleep_time);
     }
 }
