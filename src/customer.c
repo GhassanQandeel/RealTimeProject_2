@@ -140,7 +140,6 @@ void request_item() {
    // Send a message using mid
     int wait_time = 1 * customer_id; // Randomly select a wait time
     sleep(wait_time); // Simulate waiting time
-    int msg_type = random_number(0, config.sallers_number - 1); // Randomly select a message type
     msg_snd.message_type = 1; // Set the message type to the 1 (Requesting item)
     msg_snd.msg_fm = customer_id; // Set the message sender to the customer ID
     snprintf(msg_snd.buffer, sizeof(msg_snd.buffer), "%s", order); // Copy the order to the message buffer

@@ -1,5 +1,5 @@
 /*This code is a simulation of a bakery management system using OpenGL and GLUT. It visualizes the operations of a bakery, including preparation, sales, and customer interactions. Here's a breakdown of the code and how it plots the simulation:
-
+gcc -o /bin/bakery_opengl bakery_opengl.c config.c -lGL -lGLU -lglut -lm
 ### **Code Overview**
 1. **Shared Memory and Semaphores**:
     - The code uses shared memory and semaphores to manage resources and products in the bakery. Shared memory is used to store quantities of ingredients and products, while semaphores ensure synchronization between processes.
