@@ -21,6 +21,7 @@
 #define READ_COUNT 1  // Tracks number of readers
 #define WRITE_LOCK 2  // Ensures exclusive write access
 
+#include <signal.h>
 
 int mid;
 MESSAGE msg_rcv;

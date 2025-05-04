@@ -64,6 +64,13 @@ int sem_salami_id;
 
 char config_file_name[30];
 Config config;
+int *bread_catagories_sem_id;  // Dynamically allocated
+char **bread_catagories_shm_ptr;  // Dynamically allocated
+int *bread_catagories_shm_id;
+
+int *sandwiches_shm_id;
+int *sandwiches_sem_id;
+char **sandwiches_shm_ptr;
 
 
 void print_array(const int array[], int size) {
@@ -82,6 +89,13 @@ void sigusr1_handler(int signum) {
     deattach_all_shm();
     detach_shm_segments(bread_catagories_shm_ptr, config.bread_catagories_number);
     detach_shm_segments(sandwiches_shm_ptr, config.sandwiches_number);
+    //Free malloc 
+    free(bread_catagories_shm_ptr);
+    free(bread_catagories_sem_id);
+    free(bread_catagories_shm_id);
+    free(sandwiches_shm_ptr);
+    free(sandwiches_sem_id);
+    free(sandwiches_shm_id);
     exit(0);
 }
 int main(int argc, char **argv) {
@@ -102,16 +116,15 @@ int main(int argc, char **argv) {
 	    fprintf(stderr, "Failed to load configuration.\n");
 	}
 	
-	
-	// For Bread Categories
-	int bread_catagories_shm_id[config.bread_catagories_number];
-	int bread_catagories_sem_id[config.bread_catagories_number];
-	char *bread_catagories_shm_ptr[config.bread_catagories_number];
+    // Create malloc
+    bread_catagories_shm_id = malloc(config.bread_catagories_number * sizeof(int));
+    bread_catagories_shm_ptr = malloc(config.bread_catagories_number * sizeof(char *));
+    bread_catagories_sem_id = malloc(config.bread_catagories_number * sizeof(int));
 
-	// For Sandwiches
-	int sandwiches_shm_id[config.sandwiches_number];
-	int sandwiches_sem_id[config.sandwiches_number];
-	char *sandwiches_shm_ptr[config.sandwiches_number];
+    // Create malloc
+    sandwiches_shm_id = malloc(config.sandwiches_number * sizeof(int));
+    sandwiches_shm_ptr = malloc(config.sandwiches_number * sizeof(char *));
+    sandwiches_sem_id = malloc(config.sandwiches_number * sizeof(int));
 	
 	
 	for (int i = 0; i < argc; i++) {

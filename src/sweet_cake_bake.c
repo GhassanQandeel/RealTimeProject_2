@@ -43,6 +43,15 @@ char *shm_sweets_paste_ptr;
 
 int sem_sweets_paste_id;
 
+int *cake_flavors_shm_id;
+char **cake_flavors_shm_ptr;
+int *cake_flavors_sem_id;
+
+int *sweets_flavors_shm_id;
+char **sweets_flavors_shm_ptr;
+int *sweets_flavors_sem_id;
+
+
 
 char config_file_name[30];
 Config config;
@@ -61,10 +70,16 @@ void print_array(const int array[], int size) {
 
 void sigusr1_handler(int signum) {
     printf("Received SIGUSR1 signal. Exiting...\n");
-    config.simulation_running = 0;
     deattach_all_shm();
     detach_shm_segments(cake_flavors_shm_ptr, config.cake_flavors_number);
     detach_shm_segments(sweets_flavors_shm_ptr, config.sweets_flavors_number);
+    // Free malloc
+    free(cake_flavors_shm_ptr);
+    free(cake_flavors_sem_id);
+    free(cake_flavors_shm_id);
+    free(sweets_flavors_shm_ptr);
+    free(sweets_flavors_sem_id);
+    free(sweets_flavors_shm_id);
     exit(0);
 }
 int main(int argc, char **argv) {
@@ -86,15 +101,15 @@ int main(int argc, char **argv) {
 	}
 	
 	
-	// For Cake Flavors
-    int cake_flavors_shm_id[config.cake_flavors_number];
-    int cake_flavors_sem_id[config.cake_flavors_number];
-    char *cake_flavors_shm_ptr[config.cake_flavors_number];
+    //Create malloc
+    cake_flavors_shm_id = malloc(config.cake_flavors_number * sizeof(int));
+    cake_flavors_shm_ptr = malloc(config.cake_flavors_number * sizeof(char *));
+    cake_flavors_sem_id = malloc(config.cake_flavors_number * sizeof(int));
 
-    // For Sweets Flavors
-    int sweets_flavors_shm_id[config.sweets_flavors_number];
-    int sweets_flavors_sem_id[config.sweets_flavors_number];
-    char *sweets_flavors_shm_ptr[config.sweets_flavors_number];
+    // Create malloc
+    sweets_flavors_shm_id = malloc(config.sweets_flavors_number * sizeof(int)); 
+    sweets_flavors_shm_ptr = malloc(config.sweets_flavors_number * sizeof(char *));
+    sweets_flavors_sem_id = malloc(config.sweets_flavors_number * sizeof(int));
 
 	
 	

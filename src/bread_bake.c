@@ -13,6 +13,10 @@
 #define MUTEX 0       // Controls access to read_count
 #define READ_COUNT 1  // Tracks number of readers
 #define WRITE_LOCK 2  // Ensures exclusive write access
+Config config;
+int *bread_catagories_sem_id;  // Dynamically allocated
+char **bread_catagories_shm_ptr;  // Dynamically allocated
+int *bread_catagories_shm_id;
 
 void parse_ids(const char *buffer);
 void attach_shm_basic_items();
@@ -59,6 +63,9 @@ void sigusr1_handler(int signum) {
     if (shmdt(shm_paste_ptr) == -1) {
         perror("shmdt failed");
     }
+    free(bread_catagories_shm_ptr);
+    free(bread_catagories_sem_id);
+    free(bread_catagories_shm_id);
     exit(0);
 }
 int main(int argc, char **argv) {
@@ -82,9 +89,9 @@ int main(int argc, char **argv) {
 	
 	
 	// For Bread Categories
-	int bread_catagories_shm_id[config.bread_catagories_number];
-	int bread_catagories_sem_id[config.bread_catagories_number];
-	char *bread_catagories_shm_ptr[config.bread_catagories_number];
+    bread_catagories_shm_id = malloc(config.bread_catagories_number * sizeof(int));
+    bread_catagories_shm_ptr = malloc(config.bread_catagories_number * sizeof(char *));
+    bread_catagories_sem_id = malloc(config.bread_catagories_number * sizeof(int));
     sscanf(argv[3], "%d %d", &shm_paste_id, &sem_paste_id);
     shm_paste_ptr= (char *)shmat(shm_paste_id, NULL, 0);
     if (shm_paste_ptr == (char *)-1) {
