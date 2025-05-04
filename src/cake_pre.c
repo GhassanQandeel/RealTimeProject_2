@@ -68,14 +68,19 @@ char *shm_cake_paste_ptr;
 int sem_cake_paste_id;
 
 
-
+void sigusr1_handler(int signum) {
+    printf("Received SIGUSR1 signal. Exiting...\n");
+    deattach_all_shm();
+    exit(0);
+}
 int main(int argc, char **argv) {
 
     
     parse_ids(argv[2]);
     sscanf(argv[3], "%d %d", &shm_cake_paste_id, &sem_cake_paste_id);
     
-    
+    // catch sigusr1 signal
+    signal(SIGUSR1, sigusr1_handler);
     
     attach_shm_basic_items();
     
@@ -83,11 +88,6 @@ int main(int argc, char **argv) {
     while(1){
     do_work();
     }
-    
-   
-    deattach_all_shm();
-
-
     
     return 0;
 }

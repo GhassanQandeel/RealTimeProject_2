@@ -434,24 +434,7 @@ int main(int argc, char **argv)
     usleep(100000); // 100ms
     }
 
-// Cleanup code would go here if needed
-
-        
-
-
-        
-        
-        fork_chefs(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids,savory_patiss_team_pids);
-	    fork_bakers( bakers_pids,sweet_cake_bake_team_pids,sweet_savory_patiss_bake_team_pids,bread_bake_team_pids);
-        fork_opengl_process();
-        
-	    //fork_sallers(sallers_pids);
-	    fork_suppliers(suppliers_pids);
-        
-        //fork_customers(customers_pids,sallers_pids);
-       
-       
-       
+    // Cleanup code would go here if needed
         
         /*Create basic items shm _sem _and message to pass it */
        
@@ -801,7 +784,7 @@ void fork_customers(pid_t customers_pids[], pid_t sallers_pids[]){
 // Function to kill a process given its PID
 void kill_process(pid_t pid)
 {
-    if (kill(pid, SIGKILL) == 0)
+    if (kill(pid, SIGUSR1) == 0)
     {
         printf("Successfully killed process with PID %d\n", pid);
     }

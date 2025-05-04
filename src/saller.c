@@ -13,12 +13,17 @@ MESSAGE msg_snd;
 Config config;
 void recieve_message(int mid, int saller_id); 
 void send_item();
+void sigusr1_handler(int signum) {
+    printf("Received SIGUSR1 signal. Exiting...\n");
+    exit(0);
+}
 int main(int argc, char *argv[]) {
     if (argc < 3) {
         fprintf(stderr, "Usage: seller <config> <seller_id> <mid>\n");
         exit(EXIT_FAILURE);
     }
-
+    // catch sigusr1 signal
+    signal(SIGUSR1, sigusr1_handler);
     const char *config_file = argv[1];
     int seller_id = atoi(argv[2]);
     mid = atoi(argv[3]);
@@ -26,7 +31,7 @@ int main(int argc, char *argv[]) {
     // Recieve message from the queue
     while(1){
     recieve_message(mid, seller_id);
-    sleep(1); // Processing time
+    sleep(5); // Processing time
     send_item();
     }
 

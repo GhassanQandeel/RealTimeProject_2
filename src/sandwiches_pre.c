@@ -76,7 +76,14 @@ void print_array(const int array[], int size) {
     printf("]\n");
 }
 
-
+void sigusr1_handler(int signum) {
+    printf("Received SIGUSR1 signal. Exiting...\n");
+    config.simulation_running = 0;
+    deattach_all_shm();
+    detach_shm_segments(bread_catagories_shm_ptr, config.bread_catagories_number);
+    detach_shm_segments(sandwiches_shm_ptr, config.sandwiches_number);
+    exit(0);
+}
 int main(int argc, char **argv) {
 
     	strcpy(config_file_name, argv[1]);
@@ -86,7 +93,8 @@ int main(int argc, char **argv) {
 	        return EXIT_FAILURE;
 	    }
 
-	
+	// catch sigusr1 signal
+    signal(SIGUSR1, sigusr1_handler);
 	if (load_config(config_file_name, &config) == 0) {
 	    //printConfig(&config);
 	    printf("Success to load configuration.From sandwsiches\n");
@@ -132,9 +140,7 @@ int main(int argc, char **argv) {
         printf("Sandwiches sem :\n");
         print_array(sandwiches_sem_id,config.sandwiches_number);
        */
-        deattach_all_shm();
-        detach_shm_segments(bread_catagories_shm_ptr, config.bread_catagories_number);
-        detach_shm_segments(sandwiches_shm_ptr, config.sandwiches_number);
+
 
         printf("From sandwischs :Current Process ID: %d\n", getpid());
         return 0;

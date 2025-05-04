@@ -45,12 +45,18 @@ const char* generate_mood(int seconds_number , int seconds_to_wait);
 void recieve_message(int mid, int customer_id);
 void send_mood_to_bakery(const char* mood, int customer_id); 
 void pay_price();
+void sigusr1_handler(int signum) {
+    printf("Received SIGUSR1 signal. Exiting...\n");
+    exit(0);
+}
 int main(int argc, char **argv) { // Added the main function
    
     if (argc < 3) {
         fprintf(stderr, "Usage: %s <config_file> <child_pid> <time_str> <mid>\n", argv[0]);
         return EXIT_FAILURE;
     }
+    // catch sigusr1 signal
+    signal(SIGUSR1, sigusr1_handler);
 
     const char *config_file = argv[1];
     // Load the configuration file

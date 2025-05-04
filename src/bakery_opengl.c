@@ -291,6 +291,49 @@ void deattach_all_shm();
 void decode_shm_sem_message(const char* message, int* shm_ids, int* sem_ids, int max_count);
 void attach_shm_segments(int* shm_ids, char** shm_ptrs, int count);
 void detach_shm_segments(char** shm_ptrs, int count);
+void sigusr1_handler(int signum) {
+    printf("Received SIGUSR1 signal. Exiting...\n");
+    bakery.simulation_running = 0;
+    // Cleanup - detach from shared memory
+    deattach_all_shm();
+    detach_shm_segments(bread_catagories_shm_ptr, config.bread_catagories_number);
+    detach_shm_segments(sandwiches_shm_ptr, config.sandwiches_number);
+    detach_shm_segments(cake_flavors_shm_ptr, config.cake_flavors_number);
+    detach_shm_segments(sweets_flavors_shm_ptr, config.sweets_flavors_number);
+    detach_shm_segments(sweet_patisseries_shm_ptr, config.sweet_patisseries_number);
+    detach_shm_segments(savory_patisseries_shm_ptr, config.savory_patisseries_number);
+    // Free memory for Bread Categories
+    free(bread_catagories_shm_id);
+    free(bread_catagories_sem_id);
+    free(bread_catagories_shm_ptr);
+
+    // Free memory for Sandwiches
+    free(sandwiches_shm_id);
+    free(sandwiches_sem_id);
+    free(sandwiches_shm_ptr);
+
+    // Free memory for Cake Flavors
+    free(cake_flavors_shm_id);
+    free(cake_flavors_sem_id);
+    free(cake_flavors_shm_ptr);
+
+    // Free memory for Sweets Flavors
+    free(sweets_flavors_shm_id);
+    free(sweets_flavors_sem_id);
+    free(sweets_flavors_shm_ptr);
+
+    // Free memory for Sweet Patisseries
+    free(sweet_patisseries_shm_id);
+    free(sweet_patisseries_sem_id);
+    free(sweet_patisseries_shm_ptr);
+
+    // Free memory for Savory Patisseries
+    free(savory_patisseries_shm_id);
+    free(savory_patisseries_sem_id);
+    free(savory_patisseries_shm_ptr);
+
+    exit(0);
+}
 
 int main(int argc, char** argv) {
     // Verify command line arguments
@@ -298,6 +341,8 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Usage: %s <config_file> <basic_items> <paste> <cake> <sandwiches> <sweets> <sweet_patiss> <savory_patiss> <bread_shm> <sandwiches_shm> <cake_shm> <sweets_shm> <sweet_patiss_shm> <savory_patiss_shm>\n", argv[0]);
         return EXIT_FAILURE;
     }
+    // Catch sigusr1 signal
+    signal(SIGUSR1, sigusr1_handler);
 
     // Load configuration
     strcpy(config_file_name, argv[1]);
@@ -412,44 +457,7 @@ int main(int argc, char** argv) {
     // Main loop
     glutMainLoop();
 
-    // Cleanup - detach from shared memory
-    deattach_all_shm();
-    detach_shm_segments(bread_catagories_shm_ptr, config.bread_catagories_number);
-    detach_shm_segments(sandwiches_shm_ptr, config.sandwiches_number);
-    detach_shm_segments(cake_flavors_shm_ptr, config.cake_flavors_number);
-    detach_shm_segments(sweets_flavors_shm_ptr, config.sweets_flavors_number);
-    detach_shm_segments(sweet_patisseries_shm_ptr, config.sweet_patisseries_number);
-    detach_shm_segments(savory_patisseries_shm_ptr, config.savory_patisseries_number);
-    // Free memory for Bread Categories
-    free(bread_catagories_shm_id);
-    free(bread_catagories_sem_id);
-    free(bread_catagories_shm_ptr);
-
-    // Free memory for Sandwiches
-    free(sandwiches_shm_id);
-    free(sandwiches_sem_id);
-    free(sandwiches_shm_ptr);
-
-    // Free memory for Cake Flavors
-    free(cake_flavors_shm_id);
-    free(cake_flavors_sem_id);
-    free(cake_flavors_shm_ptr);
-
-    // Free memory for Sweets Flavors
-    free(sweets_flavors_shm_id);
-    free(sweets_flavors_sem_id);
-    free(sweets_flavors_shm_ptr);
-
-    // Free memory for Sweet Patisseries
-    free(sweet_patisseries_shm_id);
-    free(sweet_patisseries_sem_id);
-    free(sweet_patisseries_shm_ptr);
-
-    // Free memory for Savory Patisseries
-    free(savory_patisseries_shm_id);
-    free(savory_patisseries_sem_id);
-    free(savory_patisseries_shm_ptr);
-
+    
     return EXIT_SUCCESS;
 }
 int modify_shared_int(int sem_id, char *shm_ptr, int value_to_add) {
