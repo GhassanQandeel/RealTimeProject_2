@@ -447,9 +447,16 @@ int main(int argc, char **argv)
         
         sleep(50);
         //Abbas, when go bulid main while loop let check every 20 sec after half config.max_time by timer if there chefs need help or bakers
-        //help_chefs_baased_on_quantity(chefs_pids, paste_team_pids, cake_team_pids, sandwishes_team_pids, sweets_team_pids,sweet_patiss_team_pids
-        //,savory_patiss_team_pids,sandwiches_sem_id,sandwiches_shm_ptr);  
-        /*
+        help_chefs_baased_on_quantity(chefs_pids,
+            paste_team_pids,
+            cake_team_pids,
+            sandwishes_team_pids,
+            sweets_team_pids,
+            sweet_patiss_team_pids,
+            savory_patiss_team_pids,
+            sandwiches_sem_id,
+            sandwiches_shm_ptr);  
+        
         help_bakers_baased_on_quantity(bakers_pids, 
             sweet_cake_bake_team_pids, 
             sweet_savory_patiss_bake_team_pids, 
@@ -459,7 +466,7 @@ int main(int argc, char **argv)
             cake_flavors_shm_id, cake_flavors_sem_id, cake_flavors_shm_ptr,
             sweets_flavors_shm_id, sweets_flavors_sem_id, sweets_flavors_shm_ptr,
             sweet_patisseries_shm_id, sweet_patisseries_sem_id, sweet_patisseries_shm_ptr,
-            savory_patisseries_shm_id, savory_patisseries_sem_id, savory_patisseries_shm_ptr);*/
+            savory_patisseries_shm_id, savory_patisseries_sem_id, savory_patisseries_shm_ptr);
         cleanup_shm_sem_basic_items();
         cleanup_shm_sem_for_sale(bread_catagories_shm_id,bread_catagories_sem_id,bread_catagories_shm_ptr,
 	        sandwiches_shm_id,sandwiches_sem_id,sandwiches_shm_ptr,
@@ -733,7 +740,13 @@ void fork_sallers(pid_t sallers_pids[], pid_t customers_pids[]) {
             // format mid to string
             char mid_str[10];
             snprintf(mid_str, sizeof(mid_str), "%d", mid);  // Convert PID to string
-            execlp("bin/saller", "bin/saller", config_file_name, seller_id_str, mid_str, NULL);
+            execlp("bin/saller", "bin/saller", config_file_name, seller_id_str, mid_str,
+                bread_catagories_shm_sem_message, 
+                sandwiches_shm_sem_message, 
+                cake_flavors_shm_sem_message, 
+                sweets_flavors_shm_sem_message, 
+                sweet_patisseries_shm_sem_message, 
+                savory_patisseries_shm_sem_message, NULL);
             perror("execlp failed for saller");
             exit(EXIT_FAILURE);
         }

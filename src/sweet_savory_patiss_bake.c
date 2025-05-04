@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <string.h>
 #include "../include/config.h"
+#include <signal.h>
 
 
 #define MUTEX 0       // Controls access to read_count

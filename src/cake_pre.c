@@ -12,6 +12,7 @@
 #define MUTEX 0       // Controls access to read_count
 #define READ_COUNT 1  // Tracks number of readers
 #define WRITE_LOCK 2  // Ensures exclusive write access
+#include <signal.h>
 
 
 

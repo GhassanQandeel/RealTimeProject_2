@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <string.h>
 #include "../include/config.h"
+#include <signal.h>
 
 
 #define MUTEX 0       // Controls access to read_count
@@ -78,7 +79,6 @@ void print_array(const int array[], int size) {
 
 void sigusr1_handler(int signum) {
     printf("Received SIGUSR1 signal. Exiting...\n");
-    config.simulation_running = 0;
     deattach_all_shm();
     detach_shm_segments(bread_catagories_shm_ptr, config.bread_catagories_number);
     detach_shm_segments(sandwiches_shm_ptr, config.sandwiches_number);

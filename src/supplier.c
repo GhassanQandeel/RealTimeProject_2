@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <time.h>
+#include <signal.h>
 
 
 #define MUTEX 0       // Controls access to read_count
